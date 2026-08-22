@@ -1,0 +1,48 @@
+name: Feature request
+description: Suggest an improvement to the integration or its optional components
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: Remove serials, tokens, IP addresses, MAC addresses, certificates, account names, household names, and entered text before submitting.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Feature area
+      options:
+        - Direct Samsung integration
+        - Media player or remote commands
+        - Dashboard
+        - Optional text input
+        - Harmony and Emulated Roku
+        - Installation or documentation
+    validations:
+      required: true
+  - type: textarea
+    id: need
+    attributes:
+      label: Use case
+      description: Describe the problem or personal need this feature would address.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the expected behavior and any relevant Home Assistant interface.
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility details
+      description: Include the sanitized Samsung model identifier, firmware, and relevant command behavior when the request depends on TV capabilities.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy confirmation
+      options:
+        - label: I removed serials, tokens, IP addresses, MAC addresses, certificates, account names, household names, and entered text.
+          required: true

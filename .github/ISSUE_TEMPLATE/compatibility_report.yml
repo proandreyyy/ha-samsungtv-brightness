@@ -1,0 +1,46 @@
+name: Compatibility report
+description: Share results from another Samsung model or firmware
+title: "[Compatibility]: "
+labels:
+  - compatibility
+body:
+  - type: input
+    id: home_assistant
+    attributes:
+      label: Home Assistant version and installation type
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Samsung model identifier and firmware
+    validations:
+      required: true
+  - type: textarea
+    id: commands
+    attributes:
+      label: Commands tested, API results, and physical results
+      description: Use Pass, API-only pass, Unsupported, Fail, or Pending for each command.
+    validations:
+      required: true
+  - type: textarea
+    id: apps
+    attributes:
+      label: Playback and application results
+      description: Include the region and whether each app was installed. Do not include an account name.
+  - type: textarea
+    id: text_input
+    attributes:
+      label: Optional text-input results
+      description: Include whether separate pairing appeared, the application field used, and whether characters and submit worked. Do not include the entered phrase.
+  - type: textarea
+    id: harmony
+    attributes:
+      label: Harmony details when used
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy confirmation
+      options:
+        - label: I removed serials, tokens, IP addresses, MAC addresses, certificates, account names, household names, and entered text.
+          required: true

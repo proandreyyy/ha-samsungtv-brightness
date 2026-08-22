@@ -1,0 +1,28 @@
+# Optional companion automation for a Shield activity.
+# Use a power-reliable Android TV Remote entity. A Cast entity may report off
+# while the Shield is awake.
+- id: harmony_shield_sleep_shutdown
+  alias: End Harmony SHIELD When TV or Shield Sleeps
+  triggers:
+    - trigger: state
+      entity_id: media_player.shield_android_tv_remote
+      from: "on"
+      to: "off"
+      for: "00:00:20"
+      id: shield_asleep
+    - trigger: state
+      entity_id: media_player.samsung_tv
+      from: "on"
+      to: "off"
+      for: "00:00:20"
+      id: tv_asleep
+  conditions:
+    - condition: state
+      entity_id: remote.harmony_hub
+      attribute: current_activity
+      state: SHIELD
+  actions:
+    - action: remote.turn_off
+      target:
+        entity_id: remote.harmony_hub
+  mode: single

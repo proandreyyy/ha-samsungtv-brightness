@@ -1,0 +1,4 @@
+interface:
+  display_name: "Set Up Samsung TV IP Control"
+  short_description: "Install, configure, and verify Samsung TV control"
+  default_prompt: "Use $set-up-samsung-tv-ip-control to install, configure, and safely test Samsung TV IP Control in Home Assistant."

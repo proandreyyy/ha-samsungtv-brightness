@@ -1,0 +1,11 @@
+title: Samsung TV Remote
+views:
+  - title: Remote
+    path: remote
+    icon: mdi:remote-tv
+    type: panel
+    cards:
+      - type: custom:samsung-ip-remote-card
+        name: Samsung TV
+        media_player_entity: media_player.samsung_tv
+        remote_entity: remote.samsung_tv_remote

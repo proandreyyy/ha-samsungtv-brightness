@@ -1,0 +1,104 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Pair Samsung TV IP Control",
+        "description": "{pairing_instructions}",
+        "data": {
+          "name": "Name",
+          "host": "TV IP address",
+          "port": "IP Control port",
+          "mac": "Wired MAC address"
+        },
+        "data_description": {
+          "mac": "Used only as a Wake-on-LAN fallback."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Pair Samsung TV IP Control again",
+        "description": "{pairing_instructions}"
+      },
+      "reconfigure": {
+        "title": "Update Samsung TV connection",
+        "data": {
+          "host": "TV IP address or hostname",
+          "port": "IP Control port",
+          "mac": "Wired MAC address"
+        },
+        "data_description": {
+          "mac": "Used only as a Wake-on-LAN fallback. Leave empty to disable Wake-on-LAN."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the TV. Confirm the IP address, turn the TV on, and enable IP Remote.",
+      "certificate_mismatch": "The TV's TLS certificate changed. Credentials were not transmitted. Verify the TV and network before pairing again.",
+      "authentication_failed": "The TV rejected the saved access token. Close this flow and complete the reauthentication request first.",
+      "device_mismatch": "The verified TV identity does not match this config entry. Check the address and select the original TV.",
+      "pairing_failed": "Pairing failed. Close Samsung Home so an HDMI picture is visible, retry, and accept the prompt on the TV.",
+      "missing_unique_id": "The TV did not return a serial number. This integration requires a stable device identifier and did not save the configuration.",
+      "invalid_host": "Enter a valid TV IP address or hostname.",
+      "invalid_mac": "Enter a valid 12-digit MAC address."
+    },
+    "abort": {
+      "already_configured": "This TV is already configured.",
+      "reauth_successful": "Samsung TV IP Control was paired again.",
+      "reconfigure_successful": "The Samsung TV connection was updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Optional local text input",
+        "description": "Text input uses the TV's separate local WebSocket remote service and separate authorization token. It does not use SmartThings or the cloud.",
+        "data": {
+          "text_input_enabled": "Enable text input",
+          "text_input_port": "Text-input WebSocket port",
+          "pair_text_input_again": "Pair text input again"
+        },
+        "data_description": {
+          "pair_text_input_again": "Request a new local WebSocket token and trust the TV's current text-input certificate."
+        }
+      },
+      "text_pair": {
+        "title": "Pair local text input",
+        "description": "{pairing_instructions}"
+      }
+    },
+    "error": {
+      "text_cannot_connect": "Could not reach the TV's local text-input service. Confirm the TV is on and port 8002 is reachable.",
+      "text_certificate_mismatch": "The TV's text-input certificate changed. Verify the physical TV and network before pairing again.",
+      "text_pairing_failed": "Text-input pairing failed. Retry and accept the separate local remote prompt on the TV."
+    }
+  },
+  "exceptions": {
+    "text_input_not_configured": {
+      "message": "Text input is not enabled. Open the integration's Configure flow to pair it."
+    },
+    "text_input_authentication_failed": {
+      "message": "The TV rejected the text-input token. Open the integration's Configure flow and pair text input again."
+    },
+    "text_input_certificate_mismatch": {
+      "message": "The TV's text-input certificate changed. Verify the physical TV and network before pairing text input again."
+    },
+    "text_input_failed": {
+      "message": "The TV did not accept the text-input action. Confirm an on-screen text field is active."
+    }
+  },
+  "services": {
+    "send_text": {
+      "name": "Set text",
+      "description": "Sets the complete non-sensitive value of the active on-screen input through a short-lived local WebSocket session.",
+      "fields": {
+        "text": {
+          "name": "Text",
+          "description": "The complete printable field value. Use an empty value to clear the field. Do not use this action for passwords or other secrets."
+        },
+        "submit": {
+          "name": "Finish input",
+          "description": "Ends the TV text-input sequence after setting the text. Application behavior varies."
+        }
+      }
+    }
+  }
+}

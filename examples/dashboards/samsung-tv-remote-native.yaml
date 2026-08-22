@@ -1,0 +1,330 @@
+title: Samsung TV Remote (Native Fallback)
+views:
+  - title: Remote
+    path: remote
+    icon: mdi:remote-tv
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Samsung TV
+            icon: mdi:television
+          - type: tile
+            entity: media_player.samsung_tv
+            name: Samsung TV
+            icon: mdi:television
+            vertical: false
+          - type: markdown
+            content: |-
+              **Source:** {{ state_attr('media_player.samsung_tv', 'source') or 'Unknown' }}
+              **Volume:** {{ ((state_attr('media_player.samsung_tv', 'volume_level') or 0) * 100) | round(0) | int }}%
+              **Mute:** {{ 'On' if state_attr('media_player.samsung_tv', 'is_volume_muted') else 'Off' }}
+      - type: grid
+        cards:
+          - type: heading
+            heading: Remote
+            icon: mdi:remote
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: button
+                name: Home
+                icon: mdi:home
+                show_state: false
+                tap_action:
+                  action: perform-action
+                  perform_action: remote.send_command
+                  target:
+                    entity_id: remote.samsung_tv_remote
+                  data:
+                    command: home
+                hold_action:
+                  action: none
+              - type: button
+                name: Up
+                icon: mdi:chevron-up
+                show_state: false
+                tap_action:
+                  action: perform-action
+                  perform_action: remote.send_command
+                  target:
+                    entity_id: remote.samsung_tv_remote
+                  data:
+                    command: up
+                hold_action:
+                  action: none
+              - type: button
+                name: Mute
+                icon: mdi:volume-mute
+                show_state: false
+                tap_action:
+                  action: perform-action
+                  perform_action: remote.send_command
+                  target:
+                    entity_id: remote.samsung_tv_remote
+                  data:
+                    command: mute
+                hold_action:
+                  action: none
+              - type: button
+                name: Left
+                icon: mdi:chevron-left
+                show_state: false
+                tap_action:
+                  action: perform-action
+                  perform_action: remote.send_command
+                  target:
+                    entity_id: remote.samsung_tv_remote
+                  data:
+                    command: left
+                hold_action:
+                  action: none
+              - type: button
+                name: OK
+                icon: mdi:circle-outline
+                show_state: false
+                tap_action:
+                  action: perform-action
+                  perform_action: remote.send_command
+                  target:
+                    entity_id: remote.samsung_tv_remote
+                  data:
+                    command: enter
+                hold_action:
+                  action: none
+              - type: button
+                name: Right
+                icon: mdi:chevron-right
+                show_state: false
+                tap_action:
+                  action: perform-action
+                  perform_action: remote.send_command
+                  target:
+                    entity_id: remote.samsung_tv_remote
+                  data:
+                    command: right
+                hold_action:
+                  action: none
+              - type: button
+                name: Vol Down
+                icon: mdi:volume-minus
+                show_state: false
+                tap_action:
+                  action: perform-action
+                  perform_action: remote.send_command
+                  target:
+                    entity_id: remote.samsung_tv_remote
+                  data:
+                    command: volume_down
+                hold_action:
+                  action: none
+              - type: button
+                name: Down
+                icon: mdi:chevron-down
+                show_state: false
+                tap_action:
+                  action: perform-action
+                  perform_action: remote.send_command
+                  target:
+                    entity_id: remote.samsung_tv_remote
+                  data:
+                    command: down
+                hold_action:
+                  action: none
+              - type: button
+                name: Vol Up
+                icon: mdi:volume-plus
+                show_state: false
+                tap_action:
+                  action: perform-action
+                  perform_action: remote.send_command
+                  target:
+                    entity_id: remote.samsung_tv_remote
+                  data:
+                    command: volume_up
+                hold_action:
+                  action: none
+      - type: grid
+        cards:
+          - type: heading
+            heading: Inputs and Power
+            icon: mdi:video-input-hdmi
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: button
+                name: HDMI 1
+                icon: mdi:numeric-1-box
+                tap_action:
+                  action: perform-action
+                  perform_action: remote.send_command
+                  target:
+                    entity_id: remote.samsung_tv_remote
+                  data:
+                    command: hdmi_1
+              - type: button
+                name: HDMI 2
+                icon: mdi:numeric-2-box
+                tap_action:
+                  action: perform-action
+                  perform_action: remote.send_command
+                  target:
+                    entity_id: remote.samsung_tv_remote
+                  data:
+                    command: hdmi_2
+              - type: button
+                name: HDMI 3
+                icon: mdi:numeric-3-box
+                tap_action:
+                  action: perform-action
+                  perform_action: remote.send_command
+                  target:
+                    entity_id: remote.samsung_tv_remote
+                  data:
+                    command: hdmi_3
+              - type: button
+                name: HDMI 4
+                icon: mdi:numeric-4-box
+                tap_action:
+                  action: perform-action
+                  perform_action: remote.send_command
+                  target:
+                    entity_id: remote.samsung_tv_remote
+                  data:
+                    command: hdmi_4
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: button
+                name: TV On
+                icon: mdi:power
+                tap_action:
+                  action: perform-action
+                  perform_action: remote.send_command
+                  target:
+                    entity_id: remote.samsung_tv_remote
+                  data:
+                    command: power_on
+              - type: button
+                name: TV Off
+                icon: mdi:power-off
+                tap_action:
+                  action: perform-action
+                  confirmation:
+                    text: Turn off the Samsung TV?
+                  perform_action: remote.send_command
+                  target:
+                    entity_id: remote.samsung_tv_remote
+                  data:
+                    command: power_off
+      - type: grid
+        cards:
+          - type: heading
+            heading: Playback
+            icon: mdi:play-circle
+          - type: grid
+            columns: 5
+            square: false
+            cards:
+              - type: button
+                name: Rewind
+                icon: mdi:rewind
+                tap_action:
+                  action: perform-action
+                  perform_action: remote.send_command
+                  target:
+                    entity_id: remote.samsung_tv_remote
+                  data:
+                    command: rewind
+              - type: button
+                name: Play
+                icon: mdi:play
+                tap_action:
+                  action: perform-action
+                  perform_action: media_player.media_play
+                  target:
+                    entity_id: media_player.samsung_tv
+              - type: button
+                name: Pause
+                icon: mdi:pause
+                tap_action:
+                  action: perform-action
+                  perform_action: media_player.media_pause
+                  target:
+                    entity_id: media_player.samsung_tv
+              - type: button
+                name: Stop
+                icon: mdi:stop
+                tap_action:
+                  action: perform-action
+                  perform_action: media_player.media_stop
+                  target:
+                    entity_id: media_player.samsung_tv
+              - type: button
+                name: Fast Forward
+                icon: mdi:fast-forward
+                tap_action:
+                  action: perform-action
+                  perform_action: remote.send_command
+                  target:
+                    entity_id: remote.samsung_tv_remote
+                  data:
+                    command: fast_forward
+      - type: grid
+        cards:
+          - type: heading
+            heading: Apps
+            icon: mdi:apps
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              - type: button
+                name: YouTube
+                icon: mdi:youtube
+                tap_action:
+                  action: perform-action
+                  perform_action: media_player.play_media
+                  target:
+                    entity_id: media_player.samsung_tv
+                  data:
+                    media_content_type: app
+                    media_content_id: youtube
+              - type: button
+                name: Netflix
+                icon: mdi:netflix
+                tap_action:
+                  action: perform-action
+                  perform_action: media_player.play_media
+                  target:
+                    entity_id: media_player.samsung_tv
+                  data:
+                    media_content_type: app
+                    media_content_id: netflix
+              - type: button
+                name: Prime Video
+                icon: mdi:amazon
+                tap_action:
+                  action: perform-action
+                  perform_action: media_player.play_media
+                  target:
+                    entity_id: media_player.samsung_tv
+                  data:
+                    media_content_type: app
+                    media_content_id: amazon
+              - type: button
+                name: Browser
+                icon: mdi:web
+                tap_action:
+                  action: perform-action
+                  perform_action: media_player.play_media
+                  target:
+                    entity_id: media_player.samsung_tv
+                  data:
+                    media_content_type: app
+                    media_content_id: browser

@@ -1,0 +1,98 @@
+# Replace every entity ID and activity name with the exact values from your instance.
+- id: harmony_tv_controls_samsung_ip_control
+  alias: Harmony TV Controls via Samsung IP Control
+  description: >-
+    Uses discrete Samsung IP power commands for managed Harmony activities and
+    routes allowlisted Emulated Roku keypresses to the TV. Harmony handles each
+    activity's input selection and source-device controls.
+  triggers:
+    - trigger: event
+      event_type: roku_command
+      event_data:
+        source_name: Home Assistant TV Controls
+        type: keypress
+      id: roku_key
+    - trigger: state
+      entity_id: remote.harmony_hub
+      attribute: current_activity
+      to: SHIELD
+      id: activity_power_on
+    - trigger: state
+      entity_id: remote.harmony_hub
+      attribute: current_activity
+      to: Samsung
+      id: activity_power_on
+    - trigger: state
+      entity_id: remote.harmony_hub
+      attribute: current_activity
+      to: XBOX
+      id: activity_power_on
+    - trigger: state
+      entity_id: remote.harmony_hub
+      attribute: current_activity
+      from: SHIELD
+      to: PowerOff
+      id: activity_power_off
+    - trigger: state
+      entity_id: remote.harmony_hub
+      attribute: current_activity
+      from: Samsung
+      to: PowerOff
+      id: activity_power_off
+    - trigger: state
+      entity_id: remote.harmony_hub
+      attribute: current_activity
+      from: XBOX
+      to: PowerOff
+      id: activity_power_off
+  conditions: []
+  actions:
+    - choose:
+        - conditions:
+            - condition: trigger
+              id: activity_power_on
+          sequence:
+            - action: remote.send_command
+              target:
+                entity_id: remote.samsung_tv_remote
+              data:
+                command: power_on
+        - conditions:
+            - condition: trigger
+              id: activity_power_off
+          sequence:
+            - action: remote.send_command
+              target:
+                entity_id: remote.samsung_tv_remote
+              data:
+                command: power_off
+        - conditions:
+            - condition: and
+              conditions:
+                - condition: trigger
+                  id: roku_key
+                - condition: template
+                  value_template: "{{ trigger.event.data.key in tv_command_map }}"
+          sequence:
+            - action: remote.send_command
+              target:
+                entity_id: remote.samsung_tv_remote
+              data:
+                command: "{{ tv_command_map[trigger.event.data.key] }}"
+  variables:
+    tv_command_map:
+      Up: up
+      Down: down
+      Left: left
+      Right: right
+      Fwd: volume_up
+      Rev: volume_down
+      InstantReplay: mute
+      Back: hdmi_1
+      Info: hdmi_2
+      Search: hdmi_3
+      Play: hdmi_4
+      Home: home
+      Select: enter
+  mode: queued
+  max: 25

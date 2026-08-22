@@ -1,0 +1,92 @@
+title: Harmony Button Map
+views:
+  - title: Harmony Button Map
+    path: mapping
+    icon: mdi:remote
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: How the route works
+            icon: mdi:transit-connection-variant
+          - type: markdown
+            content: |-
+              This is a **read-only reference** for the Harmony **Roku 4 carrier** that controls the Samsung TV through Home Assistant.
+
+              **Harmony button → Roku 4 command → Home Assistant event → Samsung IP command**
+
+              Keep navigation and playback on each activity's real source device. Use the Roku carrier for Samsung-owned controls.
+          - type: heading
+            heading: Navigation and volume
+            icon: mdi:gamepad-variant-outline
+          - type: markdown
+            content: |-
+              | Harmony control | Roku 4 → HA → Samsung |
+              |---|---|
+              | Up | Direction Up → `Up` → `up` |
+              | Down | Direction Down → `Down` → `down` |
+              | Left | Direction Left → `Left` → `left` |
+              | Right | Direction Right → `Right` → `right` |
+              | Enter / OK | OK → `Select` → `enter` |
+              | Home | Home → `Home` → `home` |
+              | Volume Up | Fast Forward → `Fwd` → `volume_up` |
+              | Volume Down | Rewind → `Rev` → `volume_down` |
+              | Mute | Instant Replay → `InstantReplay` → `mute` |
+      - type: grid
+        cards:
+          - type: heading
+            heading: HDMI inputs
+            icon: mdi:video-input-hdmi
+          - type: markdown
+            content: |-
+              | Harmony control | Roku 4 → HA → Samsung |
+              |---|---|
+              | HDMI 1 | Back → `Back` → `hdmi_1` |
+              | HDMI 2 | Info → `Info` → `hdmi_2` |
+              | HDMI 3 | Search → `Search` → `hdmi_3` |
+              | HDMI 4 | Play → `Play` → `hdmi_4` |
+
+              These are optional manual input buttons. Configure normal startup input selection inside each Harmony activity.
+          - type: heading
+            heading: Power is activity-based
+            icon: mdi:power
+          - type: markdown
+            content: |-
+              | Harmony action | Home Assistant behavior |
+              |---|---|
+              | Start a managed TV activity | Send discrete Samsung IP `power_on` |
+              | End a managed TV activity | On transition to `PowerOff`, send `power_off` |
+
+              Roku `PowerOn` and `Sleep` stay unassigned because the tested Harmony setup emitted ambiguous `PowerOff` events for both.
+      - type: grid
+        cards:
+          - type: heading
+            heading: Do not assign
+            icon: mdi:alert-circle-outline
+          - type: markdown
+            content: |-
+              | Roku command | Observed collision or result |
+              |---|---|
+              | Pause | `Play` event → HDMI 4 |
+              | Stop | `Play` event → HDMI 4 |
+              | PowerOn | `PowerOff` event |
+              | Sleep | `PowerOff` event |
+              | Exit | `Home` event |
+              | Options variants | `Info` event |
+              | Page Up | Produced `PowerOff` during testing |
+              | Page Down | No event |
+              | Streaming app buttons | No event |
+      - type: grid
+        cards:
+          - type: heading
+            heading: Adding another activity
+            icon: mdi:playlist-plus
+          - type: markdown
+            content: |-
+              1. Add the real source, Samsung TV, and Roku 4 to the Harmony activity.
+              2. Set the Samsung input in Harmony.
+              3. Keep source controls on the real device.
+              4. Add matching `activity_power_on` and `activity_power_off` triggers in Home Assistant.
+              5. Sync Harmony and physically test startup, input, buttons, direct switching, and shutdown.

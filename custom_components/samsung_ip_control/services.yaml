@@ -1,0 +1,23 @@
+send_text:
+  name: Set text
+  description: Sets the complete non-sensitive value of the active on-screen input field through a short-lived local WebSocket session.
+  target:
+    entity:
+      integration: samsung_ip_control
+      domain: remote
+  fields:
+    text:
+      name: Text
+      description: The complete printable field value. Use an empty value to clear the field. Do not use this action for passwords or other secrets.
+      required: true
+      example: Samsung TV
+      selector:
+        text:
+          multiline: false
+    submit:
+      name: Finish input
+      description: Ends the TV text-input sequence after setting the text. Application behavior varies.
+      required: false
+      default: false
+      selector:
+        boolean:

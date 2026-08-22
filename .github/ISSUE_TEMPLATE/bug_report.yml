@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a reproducible problem with the integration or an optional component
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: Remove tokens, serials, IP addresses, MAC addresses, certificates, and household names before submitting.
+  - type: input
+    id: home_assistant
+    attributes:
+      label: Home Assistant version and installation type
+    validations:
+      required: true
+  - type: input
+    id: television
+    attributes:
+      label: Samsung model identifier and firmware
+    validations:
+      required: true
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Affected layer
+      options:
+        - Direct Samsung integration
+        - Media player or remote commands
+        - Optional text input
+        - Harmony and Emulated Roku
+        - Dashboard
+        - Installation or upgrade
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Reproduction steps and observed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized logs or diagnostics
+      description: Confirm the content contains no network identifiers or credentials.
