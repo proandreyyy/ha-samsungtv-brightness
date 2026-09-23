@@ -73,7 +73,7 @@ class SamsungIPControlBacklight(SamsungIPControlEntity, LightEntity):
         else:
             target = self.coordinator.data.get("backlight") or self._last_backlight
         target = max(BACKLIGHT_MIN + 1, min(BACKLIGHT_MAX, target))
-        await self._client.async_set_backlight(target)
+        self._client.async_queue_backlight(target)
         self._last_backlight = target
         self.coordinator.async_apply_local_state(backlight=target)
 
@@ -81,5 +81,5 @@ class SamsungIPControlBacklight(SamsungIPControlEntity, LightEntity):
         backlight = self.coordinator.data.get("backlight")
         if backlight:
             self._last_backlight = backlight
-        await self._client.async_set_backlight(BACKLIGHT_MIN)
+        self._client.async_queue_backlight(BACKLIGHT_MIN)
         self.coordinator.async_apply_local_state(backlight=BACKLIGHT_MIN)

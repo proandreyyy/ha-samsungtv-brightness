@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import http.client
 import json
+import logging
 import socket
 import ssl
 from typing import TYPE_CHECKING, Any
@@ -25,6 +26,8 @@ from .const import (
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
+
+_LOGGER = logging.getLogger(__name__)
 
 JSONRPC_VERSION = "2.0"
 COMMAND_TIMEOUT = 6
@@ -119,6 +122,8 @@ class SamsungIPControlClient:
         self._ssl_context: ssl.SSLContext | None = None
         self._request_id = 0
         self._mute_state: bool | None = None
+        self._pending_backlight: int | None = None
+        self._backlight_writer: asyncio.Task[None] | None = None
 
     @property
     def certificate_fingerprint(self) -> str | None:
@@ -282,6 +287,52 @@ class SamsungIPControlClient:
         if target != current:
             await self.async_set_backlight(target)
         return target
+
+    def async_queue_backlight(self, value: int) -> None:
+        """Coalesce rapid backlight writes, keeping only the latest target.
+
+        A fast slider drag (e.g. from a HomeKit accessory) can fire dozens of
+        writes in a few seconds. Each write needs its own TLS handshake (no
+        connection is kept open between requests), so working through every
+        intermediate value strictly in the order it arrived left a full-range
+        drag looking stuck near wherever it started for several seconds.
+        Only the most recent target is kept; a write already in flight
+        finishes normally, then immediately picks up whatever the latest
+        target has since become, the same coalescing scheme the sibling
+        `tvolve` project already uses for its own slider.
+        """
+        if not isinstance(value, int) or not BACKLIGHT_MIN <= value <= BACKLIGHT_MAX:
+            raise ValueError(
+                f"Backlight must be between {BACKLIGHT_MIN} and {BACKLIGHT_MAX}"
+            )
+        self._pending_backlight = value
+        if self._backlight_writer is None or self._backlight_writer.done():
+            self._backlight_writer = self._create_task(
+                self._async_drain_backlight(), "Samsung TV backlight writer"
+            )
+
+    async def _async_drain_backlight(self) -> None:
+        """Write the latest queued backlight target until none remains."""
+        while self._pending_backlight is not None:
+            target = self._pending_backlight
+            self._pending_backlight = None
+            try:
+                await self.async_set_backlight(target)
+            except SamsungIPControlError as ex:
+                _LOGGER.warning(
+                    "Samsung TV IP Control queued backlight write failed: "
+                    "%s (code=%s): %s",
+                    type(ex).__name__,
+                    getattr(ex, "code", None),
+                    ex,
+                )
+
+    def _create_task(self, coroutine: Any, name: str) -> asyncio.Task[None]:
+        """Create a Home Assistant tracked task, with a small test fallback."""
+        create_task = getattr(self._hass, "async_create_task", None)
+        if callable(create_task):
+            return create_task(coroutine, name)
+        return asyncio.create_task(coroutine, name=name)
 
     async def async_select_source(self, source: str, *, reliable: bool = True) -> None:
         """Select one exact HDMI source, optionally waking and retrying."""

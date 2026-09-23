@@ -644,7 +644,7 @@ class HomeAssistantApiTests(unittest.IsolatedAsyncioTestCase):
     async def test_backlight_turn_on_maps_ha_brightness_to_the_native_range(
         self,
     ) -> None:
-        client = types.SimpleNamespace(async_set_backlight=AsyncMock())
+        client = types.SimpleNamespace(async_queue_backlight=Mock())
         coordinator = types.SimpleNamespace(
             data={"backlight": 10}, async_apply_local_state=Mock()
         )
@@ -652,12 +652,12 @@ class HomeAssistantApiTests(unittest.IsolatedAsyncioTestCase):
             _client=client, coordinator=coordinator, _last_backlight=25
         )
         await SamsungIPControlBacklight.async_turn_on(light, **{ATTR_BRIGHTNESS: 255})
-        client.async_set_backlight.assert_awaited_once_with(50)
+        client.async_queue_backlight.assert_called_once_with(50)
         coordinator.async_apply_local_state.assert_called_once_with(backlight=50)
         self.assertEqual(light._last_backlight, 50)
 
     async def test_backlight_turn_on_clamps_a_very_low_brightness_to_one(self) -> None:
-        client = types.SimpleNamespace(async_set_backlight=AsyncMock())
+        client = types.SimpleNamespace(async_queue_backlight=Mock())
         coordinator = types.SimpleNamespace(
             data={"backlight": 0}, async_apply_local_state=Mock()
         )
@@ -665,12 +665,12 @@ class HomeAssistantApiTests(unittest.IsolatedAsyncioTestCase):
             _client=client, coordinator=coordinator, _last_backlight=25
         )
         await SamsungIPControlBacklight.async_turn_on(light, **{ATTR_BRIGHTNESS: 1})
-        client.async_set_backlight.assert_awaited_once_with(1)
+        client.async_queue_backlight.assert_called_once_with(1)
 
     async def test_backlight_turn_on_without_brightness_restores_the_last_level(
         self,
     ) -> None:
-        client = types.SimpleNamespace(async_set_backlight=AsyncMock())
+        client = types.SimpleNamespace(async_queue_backlight=Mock())
         coordinator = types.SimpleNamespace(
             data={"backlight": 0}, async_apply_local_state=Mock()
         )
@@ -678,12 +678,12 @@ class HomeAssistantApiTests(unittest.IsolatedAsyncioTestCase):
             _client=client, coordinator=coordinator, _last_backlight=25
         )
         await SamsungIPControlBacklight.async_turn_on(light)
-        client.async_set_backlight.assert_awaited_once_with(25)
+        client.async_queue_backlight.assert_called_once_with(25)
 
     async def test_backlight_turn_off_writes_zero_and_remembers_the_level(
         self,
     ) -> None:
-        client = types.SimpleNamespace(async_set_backlight=AsyncMock())
+        client = types.SimpleNamespace(async_queue_backlight=Mock())
         coordinator = types.SimpleNamespace(
             data={"backlight": 30}, async_apply_local_state=Mock()
         )
@@ -691,7 +691,7 @@ class HomeAssistantApiTests(unittest.IsolatedAsyncioTestCase):
             _client=client, coordinator=coordinator, _last_backlight=0
         )
         await SamsungIPControlBacklight.async_turn_off(light)
-        client.async_set_backlight.assert_awaited_once_with(0)
+        client.async_queue_backlight.assert_called_once_with(0)
         coordinator.async_apply_local_state.assert_called_once_with(backlight=0)
         self.assertEqual(light._last_backlight, 30)
 

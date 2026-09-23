@@ -699,6 +699,49 @@ class BacklightTests(unittest.IsolatedAsyncioTestCase):
         result = await client.async_run_remote_command("volume_up")
         self.assertIsNone(result)
 
+    async def test_queue_backlight_rejects_out_of_range_values(self) -> None:
+        client = self._client()
+        with self.assertRaises(ValueError):
+            client.async_queue_backlight(BACKLIGHT_MIN - 1)
+        with self.assertRaises(ValueError):
+            client.async_queue_backlight(BACKLIGHT_MAX + 1)
+
+    async def test_queue_backlight_coalesces_rapid_writes(self) -> None:
+        """A fast slider drag must not work through every intermediate value;
+        only the target in flight and the final one should ever be written."""
+        client = self._client()
+        written: list[int] = []
+        release = asyncio.Event()
+
+        async def fake_set_backlight(value: int) -> None:
+            written.append(value)
+            if len(written) == 1:
+                await release.wait()
+
+        with patch.object(client, "async_set_backlight", new=fake_set_backlight):
+            client.async_queue_backlight(10)
+            await asyncio.sleep(0)  # let the writer claim 10 and block on it
+            client.async_queue_backlight(20)
+            client.async_queue_backlight(30)
+            client.async_queue_backlight(40)
+            release.set()
+            await client._backlight_writer
+
+        self.assertEqual(written, [10, 40])
+
+    async def test_queue_backlight_logs_and_survives_a_write_failure(self) -> None:
+        client = self._client()
+        with patch.object(
+            client,
+            "async_set_backlight",
+            new=AsyncMock(
+                side_effect=SamsungIPControlProtocolError("rejected", code=-32601)
+            ),
+        ):
+            with self.assertLogs(client_module.__name__, level="WARNING"):
+                client.async_queue_backlight(10)
+                await client._backlight_writer
+
 
 if __name__ == "__main__":
     unittest.main()
