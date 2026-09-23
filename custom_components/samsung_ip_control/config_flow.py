@@ -47,19 +47,22 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _log_pairing_failure(step: str, ex: SamsungIPControlError) -> None:
-    """Log the exception class and any numeric code, never the TV's own text.
+    """Log the exception class, code, and message, never the TV's own text.
 
     "Pairing failed" alone does not distinguish a genuine on-TV decline from a
     later authenticated call rejecting the TV's response shape, so this is the
-    only way to tell those apart without echoing remote-provided text into
-    the log.
+    only way to tell those apart. `SamsungIPControlProtocolError` messages are
+    always a fixed string the client itself composed (e.g. naming the request
+    method), never text copied from the TV's response, so logging `str(ex)`
+    here does not violate that redaction boundary.
     """
     code = getattr(ex, "code", None)
     _LOGGER.warning(
-        "Samsung TV IP Control %s failed: %s (code=%s)",
+        "Samsung TV IP Control %s failed: %s (code=%s): %s",
         step,
         type(ex).__name__,
         code,
+        ex,
     )
 
 
