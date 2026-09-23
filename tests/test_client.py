@@ -649,13 +649,16 @@ class BacklightTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             await client.async_set_backlight(BACKLIGHT_MAX + 1)
 
-    async def test_set_backlight_wakes_the_panel_before_writing(self) -> None:
+    async def test_set_backlight_writes_directly_with_no_power_check(self) -> None:
+        """A preceding powerControl read visibly dulled the effect on a real
+        Samsung QN90B, unlike the sibling project's direct write."""
         client = self._client()
         with (
-            patch.object(client, "async_get_power", new=AsyncMock(return_value=True)),
+            patch.object(client, "async_get_power", new=AsyncMock()) as get_power,
             patch.object(client, "_async_request", new=AsyncMock()) as request,
         ):
             await client.async_set_backlight(25)
+        get_power.assert_not_awaited()
         request.assert_awaited_once_with("backlightControl", {"backlight": 25})
 
     async def test_step_backlight_clamps_at_the_maximum_and_skips_the_write(

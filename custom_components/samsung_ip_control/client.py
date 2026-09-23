@@ -256,12 +256,18 @@ class SamsungIPControlClient:
         return value
 
     async def async_set_backlight(self, value: int) -> None:
-        """Set an explicit backlight level, 0-50."""
+        """Set an explicit backlight level, 0-50.
+
+        Writes directly with no preceding power check. A sibling project
+        (`tvolve`) verified this exact direct write against a physical
+        Samsung QN90B; adding an unrelated `powerControl` read immediately
+        before it here made the visible on-screen effect nearly disappear,
+        so this stays a single request like every other read of this method.
+        """
         if not isinstance(value, int) or not BACKLIGHT_MIN <= value <= BACKLIGHT_MAX:
             raise ValueError(
                 f"Backlight must be between {BACKLIGHT_MIN} and {BACKLIGHT_MAX}"
             )
-        await self._async_ensure_powered_on()
         await self._async_request("backlightControl", {"backlight": value})
 
     async def async_step_backlight(self, delta: int) -> int:
