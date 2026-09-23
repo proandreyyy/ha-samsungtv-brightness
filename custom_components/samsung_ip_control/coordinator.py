@@ -53,16 +53,36 @@ class SamsungIPControlCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if powered_on:
                 states = await self.client.async_get_states()
                 backlight = await self.client.async_get_backlight()
-            if not self.device_information:
-                self.device_information = (
-                    await self.client.async_get_device_information()
-                )
         except SamsungIPControlAuthError as ex:
             raise ConfigEntryAuthFailed(
                 "The Samsung TV access token was rejected"
             ) from ex
         except SamsungIPControlError as ex:
             raise UpdateFailed(str(ex)) from ex
+
+        if not self.device_information:
+            try:
+                self.device_information = (
+                    await self.client.async_get_device_information()
+                )
+            except SamsungIPControlAuthError as ex:
+                raise ConfigEntryAuthFailed(
+                    "The Samsung TV access token was rejected"
+                ) from ex
+            except SamsungIPControlError as ex:
+                # Some Samsung firmware has no getDeviceInformation at all
+                # (observed as JSON-RPC -32601 on a Samsung QN90B), unlike
+                # every other method the integration uses. Losing the
+                # model/firmware/serial fields is cosmetic; failing every
+                # subsequent poll over one missing method is not.
+                _LOGGER.warning(
+                    "Samsung TV IP Control device information unavailable: "
+                    "%s (code=%s): %s",
+                    type(ex).__name__,
+                    getattr(ex, "code", None),
+                    ex,
+                )
+                self.device_information = {"model": "", "firmware": "", "serial": ""}
 
         volume = states.get("volume")
         try:

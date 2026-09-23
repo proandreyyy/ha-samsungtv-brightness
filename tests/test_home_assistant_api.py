@@ -861,6 +861,39 @@ class HomeAssistantApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(data["surface"], "Home")
         self.assertEqual(stub._surface_source, "HDMI 3")
 
+    async def test_missing_device_information_does_not_fail_the_poll(self) -> None:
+        """A QN90B answers getDeviceInformation with JSON-RPC -32601 forever;
+        that must not turn every subsequent poll into UpdateFailed."""
+        client = types.SimpleNamespace(
+            async_get_power=AsyncMock(return_value=True),
+            async_get_states=AsyncMock(
+                return_value={"inputSource": "HDMI1", "volume": 20}
+            ),
+            async_get_backlight=AsyncMock(return_value=30),
+            async_get_device_information=AsyncMock(
+                side_effect=SamsungIPControlProtocolError(
+                    "The TV rejected getDeviceInformation, code -32601",
+                    code=-32601,
+                )
+            ),
+        )
+        stub = types.SimpleNamespace(
+            client=client,
+            device_information={},
+            _surface=None,
+            _surface_source=None,
+        )
+        data = await SamsungIPControlCoordinator._async_update_data(stub)
+        self.assertEqual(data["source"], "HDMI 1")
+        self.assertEqual(
+            stub.device_information, {"model": "", "firmware": "", "serial": ""}
+        )
+
+        # The next poll must not call it again now that it is cached as empty.
+        data = await SamsungIPControlCoordinator._async_update_data(stub)
+        self.assertEqual(client.async_get_device_information.await_count, 1)
+        self.assertEqual(data["source"], "HDMI 1")
+
     async def test_backlight_is_not_polled_while_powered_off(self) -> None:
         client = types.SimpleNamespace(
             async_get_power=AsyncMock(return_value=False),
