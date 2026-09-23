@@ -124,8 +124,8 @@ Text entry uses Samsung's local `samsung.remote.control` WebSocket channel with 
 
 | Home Assistant command | Samsung method | Effect |
 | --- | --- | --- |
-| `brightness_up` | `backlightControl` | Reads the current backlight, then writes it 10 units higher, clamped to 50 |
-| `brightness_down` | `backlightControl` | Reads the current backlight, then writes it 10 units lower, clamped to 0 |
+| `brightness_up` | `backlightControl` | Reads the current backlight, then snaps it up to the next multiple of 10 (0, 10, 20, ..., 50) |
+| `brightness_down` | `backlightControl` | Reads the current backlight, then snaps it down to the previous multiple of 10 |
 
 `backlightControl` does not appear in Samsung's published 2018 or 2023 Consumer IP command sheets, unlike every other command in this document. It is included because it was independently verified, both read and write, against a physical Samsung QN90B (`QE65QN90BATXSQ`) over the same port-`1516` JSON-RPC channel by a sibling project (`tvolve`). That is a second-source, hardware-verified method rather than a guessed one, but it has **not** been exercised on this integration's own tested TV (see [COMPATIBILITY.md](COMPATIBILITY.md)), so treat it as unverified on any model until it is.
 

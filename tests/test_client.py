@@ -754,6 +754,52 @@ class BacklightTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(target, BACKLIGHT_MIN)
         setter.assert_awaited_once_with(BACKLIGHT_MIN)
 
+    async def test_step_backlight_snaps_up_to_the_next_multiple_of_ten(self) -> None:
+        client = self._client()
+        with (
+            patch.object(client, "async_get_backlight", new=AsyncMock(return_value=23)),
+            patch.object(client, "async_set_backlight", new=AsyncMock()) as setter,
+        ):
+            target = await client.async_step_backlight(BACKLIGHT_STEP)
+        self.assertEqual(target, 30)
+        setter.assert_awaited_once_with(30)
+
+    async def test_step_backlight_snaps_down_to_the_previous_multiple_of_ten(
+        self,
+    ) -> None:
+        client = self._client()
+        with (
+            patch.object(client, "async_get_backlight", new=AsyncMock(return_value=35)),
+            patch.object(client, "async_set_backlight", new=AsyncMock()) as setter,
+        ):
+            target = await client.async_step_backlight(-BACKLIGHT_STEP)
+        self.assertEqual(target, 30)
+        setter.assert_awaited_once_with(30)
+
+    async def test_step_backlight_up_from_an_exact_multiple_advances_one_step(
+        self,
+    ) -> None:
+        client = self._client()
+        with (
+            patch.object(client, "async_get_backlight", new=AsyncMock(return_value=20)),
+            patch.object(client, "async_set_backlight", new=AsyncMock()) as setter,
+        ):
+            target = await client.async_step_backlight(BACKLIGHT_STEP)
+        self.assertEqual(target, 30)
+        setter.assert_awaited_once_with(30)
+
+    async def test_step_backlight_down_from_an_exact_multiple_retreats_one_step(
+        self,
+    ) -> None:
+        client = self._client()
+        with (
+            patch.object(client, "async_get_backlight", new=AsyncMock(return_value=20)),
+            patch.object(client, "async_set_backlight", new=AsyncMock()) as setter,
+        ):
+            target = await client.async_step_backlight(-BACKLIGHT_STEP)
+        self.assertEqual(target, 10)
+        setter.assert_awaited_once_with(10)
+
     async def test_run_remote_command_returns_the_new_backlight(self) -> None:
         client = self._client()
         with patch.object(

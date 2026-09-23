@@ -285,14 +285,31 @@ class SamsungIPControlClient:
         await self._async_request("backlightControl", {"backlight": value})
 
     async def async_step_backlight(self, delta: int) -> int:
-        """Adjust the backlight by delta, clamped to the native range.
+        """Snap the backlight to the next multiple of BACKLIGHT_STEP in
+        delta's direction (0, 10, 20, ..., BACKLIGHT_MAX) rather than adding
+        delta to whatever the current value happens to be. Only the sign of
+        delta is used; a button that always lands on a round number is
+        easier to reason about than one that drifts to odd values depending
+        on where it started.
 
         Reads before writing rather than trusting a locally cached value,
         because unlike mute there is no cheap way to keep backlight current
         between polls without a per-command round trip.
         """
         current = await self.async_get_backlight()
-        target = max(BACKLIGHT_MIN, min(BACKLIGHT_MAX, current + delta))
+        if delta > 0:
+            target = min(
+                BACKLIGHT_MAX,
+                ((current // BACKLIGHT_STEP) + 1) * BACKLIGHT_STEP,
+            )
+        elif delta < 0:
+            target = (
+                max(BACKLIGHT_MIN, ((current - 1) // BACKLIGHT_STEP) * BACKLIGHT_STEP)
+                if current > BACKLIGHT_MIN
+                else BACKLIGHT_MIN
+            )
+        else:
+            target = current
         if target != current:
             await self.async_set_backlight(target)
         return target
