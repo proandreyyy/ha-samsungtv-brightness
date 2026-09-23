@@ -776,27 +776,39 @@ class BacklightTests(unittest.IsolatedAsyncioTestCase):
             client.async_queue_backlight(BACKLIGHT_MAX + 1)
 
     async def test_queue_backlight_coalesces_rapid_writes(self) -> None:
-        """A fast slider drag must not work through every intermediate value;
-        only the target in flight and the final one should ever be written."""
+        """A fast slider drag must not work through every intermediate value
+        while a write is in flight; only the target in flight and the
+        latest one waiting behind it should ever be written."""
         client = self._client()
-        written: list[int] = []
+        calls: list[int] = []
+        started = asyncio.Event()
         release = asyncio.Event()
 
-        async def fake_set_backlight(value: int) -> None:
-            written.append(value)
-            if len(written) == 1:
+        async def fake_request(method, params=None):
+            calls.append(params["backlight"])
+            if params["backlight"] == 9:  # the first burst item's nudge
+                started.set()
                 await release.wait()
+            return {"backlight": params["backlight"]}
 
-        with patch.object(client, "async_set_backlight", new=fake_set_backlight):
+        with (
+            patch.object(client_module.asyncio, "sleep", new=AsyncMock()),
+            patch.object(client, "_async_request", new=fake_request),
+        ):
             client.async_queue_backlight(10)
-            await asyncio.sleep(0)  # let the writer claim 10 and block on it
+            # Wait for the writer to actually claim 10 and block on its
+            # nudge, rather than guessing how many loop turns that takes.
+            await asyncio.wait_for(started.wait(), timeout=1)
             client.async_queue_backlight(20)
             client.async_queue_backlight(30)
             client.async_queue_backlight(40)
             release.set()
             await client._backlight_writer
 
-        self.assertEqual(written, [10, 40])
+        # 10 is the first target in the burst, so it is nudged (9, then 10).
+        # 20 and 30 arrived while 10 was still in flight and are dropped;
+        # 40, the latest by the time 10 finishes, gets a single plain write.
+        self.assertEqual(calls, [9, 10, 40])
 
     async def test_queue_backlight_logs_and_survives_a_write_failure(self) -> None:
         client = self._client()

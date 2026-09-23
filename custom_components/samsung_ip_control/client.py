@@ -321,12 +321,24 @@ class SamsungIPControlClient:
             )
 
     async def _async_drain_backlight(self) -> None:
-        """Write the latest queued backlight target until none remains."""
+        """Write every queued backlight target until none remains.
+
+        Only the first target of a burst needs the neighbor-value nudge:
+        each later distinct target already differs from whatever was just
+        written, and that alone is what makes a write land instantly (see
+        `async_set_backlight`). A plain single write is enough for those,
+        which also means an active slider drag sends every position it
+        passes through rather than jumping straight to wherever it ends.
+        """
+        first = True
         while self._pending_backlight is not None:
             target = self._pending_backlight
             self._pending_backlight = None
             try:
-                await self.async_set_backlight(target)
+                if first:
+                    await self.async_set_backlight(target)
+                else:
+                    await self._async_request("backlightControl", {"backlight": target})
             except SamsungIPControlError as ex:
                 _LOGGER.warning(
                     "Samsung TV IP Control queued backlight write failed: "
@@ -340,6 +352,7 @@ class SamsungIPControlClient:
                     "Samsung TV IP Control backlight write raised an "
                     "unexpected exception"
                 )
+            first = False
 
     def _create_task(self, coroutine: Any, name: str) -> asyncio.Task[None]:
         """Create a Home Assistant tracked task, with a small test fallback."""
