@@ -306,16 +306,24 @@ class SamsungIPControlClient:
                 f"Backlight must be between {BACKLIGHT_MIN} and {BACKLIGHT_MAX}"
             )
         self._pending_backlight = value
-        if self._backlight_writer is None or self._backlight_writer.done():
+        spawning = self._backlight_writer is None or self._backlight_writer.done()
+        _LOGGER.warning(
+            "Samsung TV IP Control queue_backlight(%s) called, spawning_writer=%s",
+            value,
+            spawning,
+        )
+        if spawning:
             self._backlight_writer = self._create_task(
                 self._async_drain_backlight(), "Samsung TV backlight writer"
             )
 
     async def _async_drain_backlight(self) -> None:
         """Write the latest queued backlight target until none remains."""
+        _LOGGER.warning("Samsung TV IP Control backlight writer started")
         while self._pending_backlight is not None:
             target = self._pending_backlight
             self._pending_backlight = None
+            _LOGGER.warning("Samsung TV IP Control sending backlight %s now", target)
             try:
                 await self.async_set_backlight(target)
             except SamsungIPControlError as ex:
@@ -326,6 +334,16 @@ class SamsungIPControlClient:
                     getattr(ex, "code", None),
                     ex,
                 )
+            except Exception:
+                _LOGGER.exception(
+                    "Samsung TV IP Control backlight write raised an "
+                    "unexpected exception"
+                )
+            else:
+                _LOGGER.warning(
+                    "Samsung TV IP Control backlight %s sent successfully", target
+                )
+        _LOGGER.warning("Samsung TV IP Control backlight writer finished")
 
     def _create_task(self, coroutine: Any, name: str) -> asyncio.Task[None]:
         """Create a Home Assistant tracked task, with a small test fallback."""
