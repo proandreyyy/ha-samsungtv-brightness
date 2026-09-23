@@ -110,8 +110,11 @@ class SamsungIPControlRemote(SamsungIPControlEntity, RemoteEntity):
 
         for repeat_index in range(repeats):
             for command_index, item in enumerate(commands):
-                await self._client.async_run_remote_command(item)
-                self.coordinator.async_apply_command_effect(item)
+                result = await self._client.async_run_remote_command(item)
+                if item in ("brightness_up", "brightness_down"):
+                    self.coordinator.async_apply_local_state(backlight=result)
+                else:
+                    self.coordinator.async_apply_command_effect(item)
                 if delay > 0 and (
                     command_index < len(commands) - 1 or repeat_index < repeats - 1
                 ):

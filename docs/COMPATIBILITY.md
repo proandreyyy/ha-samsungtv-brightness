@@ -81,6 +81,10 @@ Optional text input paired separately and synchronized complete values, replacem
 | `app_netflix`, `app_youtube` | Physical pass | Each app has visible launch confirmation; both also passed the current API run. |
 | `app_vudu`, `app_vudu_alt`, `app_pandora`, `app_hulu` | Unsupported on tested setup | The installed-app or regional route was unavailable, or the TV returned `-32002`. |
 
+## Brightness (`backlightControl`)
+
+`brightness_up` and `brightness_down` were added after the 2026-08-22 run recorded above and are **not** part of it. `backlightControl` is absent from Samsung's published Consumer IP command sheets; its only verification is a sibling project (`tvolve`) reading and writing it against a physical Samsung QN90B (`QE65QN90BATXSQ`) over the same port-`1516` channel. That is a different unit from the `25_RSM_QD` this repository's matrix above covers. Until it is exercised against a TV tracked in this repository's own compatibility log, treat it the way an unreported model would be treated: plausible by protocol similarity, not yet Pass.
+
 ## Reporting another model
 
 Open a compatibility issue with the consumer model number, model year, sales region, firmware, Home Assistant version, installation type, reachable Consumer IP control port, and per-command results. Include whether power-on still works after the TV has been off for more than one minute and whether wired or wireless Wake-on-LAN was used. When optional text input was tested, include whether secure port `8002` was reachable, whether a separate authorization prompt appeared, which non-sensitive application field was active, and whether characters and `submit` behaved as expected.

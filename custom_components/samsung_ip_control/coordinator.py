@@ -49,8 +49,10 @@ class SamsungIPControlCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         try:
             powered_on = await self.client.async_get_power()
             states: dict[str, Any] = {}
+            backlight: int | None = None
             if powered_on:
                 states = await self.client.async_get_states()
+                backlight = await self.client.async_get_backlight()
             if not self.device_information:
                 self.device_information = (
                     await self.client.async_get_device_information()
@@ -90,6 +92,7 @@ class SamsungIPControlCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "picture_mode": states.get("pictureMode"),
             "sound_mode": states.get("soundMode"),
             "speaker": states.get("speakerSelect"),
+            "backlight": backlight,
         }
 
     @callback

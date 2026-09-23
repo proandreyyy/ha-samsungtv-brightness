@@ -44,6 +44,9 @@ REMOTE_COMMANDS = const_module.REMOTE_COMMANDS
 REMOTE_KEY_TO_API = const_module.REMOTE_KEY_TO_API
 APP_COMMANDS = const_module.APP_COMMANDS
 APP_TO_API = const_module.APP_TO_API
+BACKLIGHT_MIN = const_module.BACKLIGHT_MIN
+BACKLIGHT_MAX = const_module.BACKLIGHT_MAX
+BACKLIGHT_STEP = const_module.BACKLIGHT_STEP
 
 
 class FakeHomeAssistant:
@@ -89,6 +92,10 @@ class RecordingClient(SamsungIPControlClient):
 
     async def async_launch_app(self, app: str) -> None:
         self.calls.append(("app", app))
+
+    async def async_step_backlight(self, delta: int) -> int:
+        self.calls.append(("backlight", delta))
+        return 0
 
 
 class MuteRecordingClient(SamsungIPControlClient):
@@ -415,6 +422,8 @@ class RemoteCommandTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn(("channel", "down"), client.calls)
         for command in APP_COMMANDS:
             self.assertIn(("app", command.removeprefix("app_")), client.calls)
+        self.assertIn(("backlight", BACKLIGHT_STEP), client.calls)
+        self.assertIn(("backlight", -BACKLIGHT_STEP), client.calls)
 
     async def test_extended_remote_keys_use_documented_api_values(self) -> None:
         client = SamsungIPControlClient(
@@ -602,6 +611,90 @@ class RemoteCommandTests(unittest.IsolatedAsyncioTestCase):
                 ("inputSourceControl", {"inputSource": "HDMI2"}),
             ],
         )
+
+
+class BacklightTests(unittest.IsolatedAsyncioTestCase):
+    @staticmethod
+    def _client() -> SamsungIPControlClient:
+        return SamsungIPControlClient(
+            FakeHomeAssistant(),
+            "192.0.2.1",
+            token="secret",
+            certificate_fingerprint="AA" * 32,
+        )
+
+    async def test_get_backlight_reads_the_native_value(self) -> None:
+        client = self._client()
+        with patch.object(
+            client,
+            "_async_request",
+            new=AsyncMock(return_value={"backlight": 30}),
+        ):
+            self.assertEqual(await client.async_get_backlight(), 30)
+
+    async def test_get_backlight_rejects_an_out_of_range_reading(self) -> None:
+        client = self._client()
+        with patch.object(
+            client,
+            "_async_request",
+            new=AsyncMock(return_value={"backlight": BACKLIGHT_MAX + 1}),
+        ):
+            with self.assertRaises(SamsungIPControlProtocolError):
+                await client.async_get_backlight()
+
+    async def test_set_backlight_rejects_out_of_range_values(self) -> None:
+        client = self._client()
+        with self.assertRaises(ValueError):
+            await client.async_set_backlight(BACKLIGHT_MIN - 1)
+        with self.assertRaises(ValueError):
+            await client.async_set_backlight(BACKLIGHT_MAX + 1)
+
+    async def test_set_backlight_wakes_the_panel_before_writing(self) -> None:
+        client = self._client()
+        with (
+            patch.object(client, "async_get_power", new=AsyncMock(return_value=True)),
+            patch.object(client, "_async_request", new=AsyncMock()) as request,
+        ):
+            await client.async_set_backlight(25)
+        request.assert_awaited_once_with("backlightControl", {"backlight": 25})
+
+    async def test_step_backlight_clamps_at_the_maximum_and_skips_the_write(
+        self,
+    ) -> None:
+        client = self._client()
+        with (
+            patch.object(
+                client, "async_get_backlight", new=AsyncMock(return_value=BACKLIGHT_MAX)
+            ),
+            patch.object(client, "async_set_backlight", new=AsyncMock()) as setter,
+        ):
+            target = await client.async_step_backlight(BACKLIGHT_STEP)
+        self.assertEqual(target, BACKLIGHT_MAX)
+        setter.assert_not_awaited()
+
+    async def test_step_backlight_clamps_at_the_minimum(self) -> None:
+        client = self._client()
+        with (
+            patch.object(client, "async_get_backlight", new=AsyncMock(return_value=5)),
+            patch.object(client, "async_set_backlight", new=AsyncMock()) as setter,
+        ):
+            target = await client.async_step_backlight(-BACKLIGHT_STEP)
+        self.assertEqual(target, BACKLIGHT_MIN)
+        setter.assert_awaited_once_with(BACKLIGHT_MIN)
+
+    async def test_run_remote_command_returns_the_new_backlight(self) -> None:
+        client = self._client()
+        with patch.object(
+            client, "async_step_backlight", new=AsyncMock(return_value=40)
+        ) as step:
+            result = await client.async_run_remote_command("brightness_up")
+        step.assert_awaited_once_with(BACKLIGHT_STEP)
+        self.assertEqual(result, 40)
+
+    async def test_run_remote_command_returns_none_for_other_commands(self) -> None:
+        client = RecordingClient()
+        result = await client.async_run_remote_command("volume_up")
+        self.assertIsNone(result)
 
 
 if __name__ == "__main__":

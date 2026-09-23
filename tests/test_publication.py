@@ -75,6 +75,8 @@ DOCUMENTED_EXTENDED_COMMANDS = {
     "app_youtube",
     "back",
     "blue",
+    "brightness_down",
+    "brightness_up",
     "caption",
     "channel_down",
     "channel_up",
@@ -109,6 +111,8 @@ DASHBOARD_HIDDEN_COMMANDS = {
     "app_vudu",
     "app_vudu_alt",
     "blue",
+    "brightness_down",
+    "brightness_up",
     "caption",
     "dash",
     "green",
@@ -442,7 +446,7 @@ class PublicationTests(unittest.TestCase):
             REMOTE_COMMANDS,
             HARMONY_EXPECTED_COMMANDS | DOCUMENTED_EXTENDED_COMMANDS,
         )
-        self.assertEqual(len(REMOTE_COMMANDS), 52)
+        self.assertEqual(len(REMOTE_COMMANDS), 54)
         self.assertEqual(const_module.REMOTE_KEY_TO_API, EXPECTED_REMOTE_KEYS)
         self.assertEqual(const_module.APP_TO_API, EXPECTED_APPS)
         commands_doc = (ROOT / "docs" / "COMMANDS.md").read_text(encoding="utf-8")

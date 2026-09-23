@@ -15,6 +15,9 @@ from .const import (
     API_TO_SOURCE,
     APP_ALIASES,
     APP_TO_API,
+    BACKLIGHT_MAX,
+    BACKLIGHT_MIN,
+    BACKLIGHT_STEP,
     DEFAULT_PORT,
     REMOTE_KEY_TO_API,
     SOURCE_TO_API,
@@ -242,6 +245,38 @@ class SamsungIPControlClient:
         )
         await self.async_set_mute(not current)
 
+    async def async_get_backlight(self) -> int:
+        """Return the TV's current backlight level, 0-50."""
+        result = await self._async_request("backlightControl")
+        value = result.get("backlight")
+        if not isinstance(value, int) or not BACKLIGHT_MIN <= value <= BACKLIGHT_MAX:
+            raise SamsungIPControlProtocolError(
+                "The TV returned an unknown backlight value"
+            )
+        return value
+
+    async def async_set_backlight(self, value: int) -> None:
+        """Set an explicit backlight level, 0-50."""
+        if not isinstance(value, int) or not BACKLIGHT_MIN <= value <= BACKLIGHT_MAX:
+            raise ValueError(
+                f"Backlight must be between {BACKLIGHT_MIN} and {BACKLIGHT_MAX}"
+            )
+        await self._async_ensure_powered_on()
+        await self._async_request("backlightControl", {"backlight": value})
+
+    async def async_step_backlight(self, delta: int) -> int:
+        """Adjust the backlight by delta, clamped to the native range.
+
+        Reads before writing rather than trusting a locally cached value,
+        because unlike mute there is no cheap way to keep backlight current
+        between polls without a per-command round trip.
+        """
+        current = await self.async_get_backlight()
+        target = max(BACKLIGHT_MIN, min(BACKLIGHT_MAX, current + delta))
+        if target != current:
+            await self.async_set_backlight(target)
+        return target
+
     async def async_select_source(self, source: str, *, reliable: bool = True) -> None:
         """Select one exact HDMI source, optionally waking and retrying."""
         try:
@@ -289,39 +324,48 @@ class SamsungIPControlClient:
                 await self.async_power_on()
                 await asyncio.sleep(4)
 
-    async def async_run_remote_command(self, command: str) -> None:
-        """Run one allowlisted local remote command."""
+    async def async_run_remote_command(self, command: str) -> int | None:
+        """Run one allowlisted local remote command.
+
+        Returns the new backlight level for `brightness_up`/`brightness_down`
+        so a caller can publish it without a second read; every other command
+        returns `None`, unchanged from before backlight support existed.
+        """
         normalized = command.strip().lower().replace("-", "_").replace(" ", "_")
         if normalized in REMOTE_KEY_TO_API:
             await self.async_send_navigation_key(normalized)
-            return
+            return None
         if normalized == "volume_up":
             await self.async_volume_up()
-            return
+            return None
         if normalized == "volume_down":
             await self.async_volume_down()
-            return
+            return None
         if normalized == "mute":
             await self.async_toggle_mute()
-            return
+            return None
         if normalized == "channel_up":
             await self.async_channel_up()
-            return
+            return None
         if normalized == "channel_down":
             await self.async_channel_down()
-            return
+            return None
         if normalized.startswith("hdmi_") and normalized[-1:] in "1234":
             await self.async_select_source(f"HDMI {normalized[-1]}")
-            return
+            return None
         if normalized == "power_on":
             await self.async_power_on()
-            return
+            return None
         if normalized == "power_off":
             await self.async_power_off()
-            return
+            return None
+        if normalized == "brightness_up":
+            return await self.async_step_backlight(BACKLIGHT_STEP)
+        if normalized == "brightness_down":
+            return await self.async_step_backlight(-BACKLIGHT_STEP)
         if normalized.startswith("app_"):
             await self.async_launch_app(normalized.removeprefix("app_"))
-            return
+            return None
         raise ValueError(f"Unsupported remote command: {command}")
 
     async def async_wake_on_lan(self) -> None:

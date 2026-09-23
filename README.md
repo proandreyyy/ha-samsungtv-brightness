@@ -24,7 +24,8 @@ The integration uses the independent `samsung_ip_control` domain and leaves Home
 - UI-based setup with stable TV identity, reconfiguration, and token reauthentication.
 - Local polling for power, volume, mute, HDMI source, picture mode, sound mode, and speaker state.
 - Immediate state updates after successful commands, followed by regular polling for reconciliation.
-- A `remote` entity with 52 fixed commands covering navigation, playback, digits, color and channel keys, direct applications, discrete power, exact HDMI selection, volume, and mute.
+- A `remote` entity with 54 fixed commands covering navigation, playback, digits, color and channel keys, direct applications, discrete power, exact HDMI selection, volume, mute, and two brightness step commands.
+- A `light` entity exposing backlight brightness as a real, draggable slider in Apple Home, plus two remappable remote buttons for a physical ±10 shortcut. See [HOMEKIT_BRIGHTNESS.md](docs/HOMEKIT_BRIGHTNESS.md).
 - Native media-player play, pause, stop, and allowlisted application launch.
 - A responsive first-party remote card with 39 daily controls, four applications, live state, Number pad, and optional text entry.
 - Privacy-redacted diagnostics and bounded protocol responses.
@@ -117,6 +118,7 @@ Home Assistant's Emulated Roku listener is an unauthenticated local-network API.
 | Check model and firmware evidence | [Compatibility](docs/COMPATIBILITY.md) |
 | Configure Harmony | [Harmony setup](docs/HARMONY_SETUP.md) and [button map](docs/BUTTON_MAP.md) |
 | Add a dashboard | [Dashboard examples](examples/dashboards/README.md) |
+| Add brightness to Apple Home | [HomeKit brightness](docs/HOMEKIT_BRIGHTNESS.md) |
 | Troubleshoot a problem | [Troubleshooting](docs/TROUBLESHOOTING.md) |
 | Understand the implementation | [Architecture](docs/ARCHITECTURE.md) |
 | Develop or verify changes | [Testing and acceptance](docs/TESTING.md) and [contributing](CONTRIBUTING.md) |
@@ -125,6 +127,8 @@ Home Assistant's Emulated Roku listener is an unauthenticated local-network API.
 ## Project status
 
 Version [`1.1.0`](https://github.com/anjulahettige/home-assistant-samsung-tv-ip-control/releases/tag/v1.1.0) is the current release. All 52 allowlisted commands were exercised on the tested setup, with API acceptance and visible TV behavior recorded separately. Wider model and firmware reports are welcome through the repository's compatibility issue form.
+
+This fork adds two more commands, `brightness_up` and `brightness_down`, plus a `light.<name>_backlight` entity, after that hardware run. They use `backlightControl`, a method Samsung does not publish; see [Brightness](docs/COMPATIBILITY.md#brightness-backlightcontrol) for what verifies it and why it is not yet part of the run above.
 
 ## License
 

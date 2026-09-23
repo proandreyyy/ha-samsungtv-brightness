@@ -34,7 +34,7 @@ The base suite uses Python's standard library and does not connect to Home Assis
 - Blocking token transmission after a certificate mismatch.
 - JSON-RPC version validation and exact decimal-string response-ID correlation.
 - Bounded response bodies and controlled remote error text.
-- All 52 allowlisted remote commands, including the complete published key set and fixed direct-access apps.
+- All 54 allowlisted remote commands, including the complete published key set, fixed direct-access apps, and the two undocumented brightness step commands.
 - Exact `remoteKeyControl`, `channelUpDnControl`, and `directAccessControl` payloads.
 - Native media-player play, pause, stop, and app-launch methods.
 - Optional text payload encoding, printable 200-character boundary, certificate pinning, and credential redaction.
@@ -120,7 +120,7 @@ Repository tests scan the tracked working tree. Use a dedicated history-aware se
 6. Confirm **Samsung TV IP Control** appears under **Settings > Devices & services**.
 7. Confirm the config entry loads without authentication, certificate, or transport errors.
 8. Confirm one media player and one remote entity exist.
-9. Confirm the remote entity lists exactly the 52 documented commands and the media player lists eight `supported_apps` values.
+9. Confirm the remote entity lists exactly the 54 documented commands, the media player lists eight `supported_apps` values, and a `light.<name>_backlight` entity exists.
 10. When optional text input was paired, confirm the remote's `text_input_enabled` attribute is `true` and the `samsung_ip_control.send_text` action appears.
 
 ### Clean-install confidence
@@ -151,6 +151,7 @@ Run these tests before dashboards or Harmony. Use **Developer Tools > Actions** 
 16. Test Power On, Power Off, and Power Toggle only with explicit approval. Restore the starting power state with a discrete command.
 17. Restore the starting input, screen or application where practical, volume, mute state, power state, and Harmony activity.
 18. Confirm no unexpected authentication, certificate, protocol, or transport errors appeared.
+19. Record the starting backlight, then test `brightness_up` and `brightness_down` and confirm the reported value moves by 10 and clamps at 0 and 50. This is the one command pair not in the 2026-08-22 hardware run in [COMPATIBILITY.md](COMPATIBILITY.md#brightness-backlightcontrol); record model, firmware, and result separately from the rest of the matrix. Restore the starting backlight afterward.
 
 Record every command separately. A media-player state update supplies supporting evidence. The visible and audible TV result supplies physical evidence.
 
@@ -160,7 +161,7 @@ The official command sheets describe a broader cross-model surface than any sing
 
 1. Confirm `/samsung_ip_control_static/samsung-ip-remote-card.js` returns the exact module shipped in the installed integration and is registered once as a JavaScript-module resource.
 2. Confirm the first-party dashboard targets the new remote and media-player entity IDs and loads without a missing-resource error.
-3. Confirm the card contains the documented focused 39-command subset of the remote's 52-value `supported_commands` attribute. Confirm Hulu, both Vudu variants, Pandora, and the Extended controls section are absent from the card while the backend allowlist remains unchanged.
+3. Confirm the card contains the documented focused 39-command subset of the remote's 54-value `supported_commands` attribute. Confirm Hulu, both Vudu variants, Pandora, the brightness commands, and the Extended controls section are absent from the card while the backend allowlist remains unchanged.
 4. Confirm the status header reflects power, source, volume, and mute without exposing private device metadata.
 5. Confirm TV Off retains a confirmation prompt.
 6. Confirm the text field is disabled when optional text input is unpaired and enabled when `text_input_enabled` is true.

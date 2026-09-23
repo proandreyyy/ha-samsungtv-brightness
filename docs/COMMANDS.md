@@ -1,6 +1,6 @@
 # Commands, playback, applications, and text input
 
-The Home Assistant `remote` entity exposes 52 strictly allowlisted commands. They cover every remote-key value in Samsung's published 2023 Consumer IP Control command sheet, the legacy `ambient` key from Samsung's 2018 sheet, channel buttons, discrete power and HDMI controls, volume and mute, and the sheet's fixed direct-access applications.
+The Home Assistant `remote` entity exposes 54 strictly allowlisted commands. Fifty-two cover every remote-key value in Samsung's published 2023 Consumer IP Control command sheet, the legacy `ambient` key from Samsung's 2018 sheet, channel buttons, discrete power and HDMI controls, volume and mute, and the sheet's fixed direct-access applications. The remaining two, `brightness_up` and `brightness_down`, use `backlightControl`, a method absent from both published sheets; see [Brightness](#brightness-undocumented-by-samsung) below before relying on it.
 
 Samsung documents these options in its [2023 IP Command List](https://image-us.samsung.com/SamsungUS/samsungbusiness/resources/pdfs/ip-command-list/IP-Command-List_2023.pdf) and [2018 command list](https://image-us.samsung.com/SamsungUS/tv-ci-resources/2018-contact-and-other-resources/TV_IP_CommandList_v1_2_1Pager.pdf). Availability still depends on model, firmware, region, installed applications, current input, and current TV screen.
 
@@ -119,6 +119,27 @@ Do not send passwords, access codes, personal data, or other secrets through `sa
 The first-party card uses a separate authenticated `POST /api/samsung_ip_control/sensitive_text` endpoint for interactive entry. It bypasses Home Assistant services and traces, checks entity-control permission, bounds the request, returns no entered text, marks responses `Cache-Control: no-store`, retains no last-value cache, and clears the visible browser value on blur or unload. Sensitive entry through the card requires an HTTPS Home Assistant page and a trusted browser, device keyboard, Home Assistant host, network, reverse proxy, and TV. The plaintext necessarily exists transiently in those runtime components while being entered and transmitted.
 
 Text entry uses Samsung's local `samsung.remote.control` WebSocket channel with repeated base64 `SendInputString` snapshots, TV IME lifecycle events, and optional `SendInputEnd`. Physical testing showed that the tested TV accepts ordered snapshots without `custom.remote.textReceived`; sending that compatibility broadcast caused later edits to stop following the browser field. The maintained [`samsungtvws` library](https://github.com/xchwarze/samsung-tv-ws-api/blob/master/samsungtvws/remote.py) notes that some TVs require the broadcast before their first text input, so this remains a model-specific compatibility boundary and must be reported if another TV needs that variant. Samsung's official [Keyboard/IME documentation](https://developer.samsung.com/smarttv/develop/guides/user-interaction/keyboardime.html) describes application-side IME behavior but does not define this remote WebSocket contract.
+
+## Brightness (undocumented by Samsung)
+
+| Home Assistant command | Samsung method | Effect |
+| --- | --- | --- |
+| `brightness_up` | `backlightControl` | Reads the current backlight, then writes it 10 units higher, clamped to 50 |
+| `brightness_down` | `backlightControl` | Reads the current backlight, then writes it 10 units lower, clamped to 0 |
+
+`backlightControl` does not appear in Samsung's published 2018 or 2023 Consumer IP command sheets, unlike every other command in this document. It is included because it was independently verified, both read and write, against a physical Samsung QN90B (`QE65QN90BATXSQ`) over the same port-`1516` JSON-RPC channel by a sibling project (`tvolve`). That is a second-source, hardware-verified method rather than a guessed one, but it has **not** been exercised on this integration's own tested TV (see [COMPATIBILITY.md](COMPATIBILITY.md)), so treat it as unverified on any model until it is.
+
+The backlight entity's native range is 0-50, read and written as a plain integer with no percentage scaling at the protocol level:
+
+```yaml
+action: remote.send_command
+target:
+  entity_id: remote.samsung_tv_remote
+data:
+  command: brightness_up
+```
+
+The `light.<name>_backlight` entity linearly maps that native 0-50 range to Home Assistant's 0-255 brightness scale and is the only way to get a draggable slider into Apple Home; see [HOMEKIT_BRIGHTNESS.md](HOMEKIT_BRIGHTNESS.md) for why the `remote`/Television accessory itself cannot show one.
 
 ## Harmony and Emulated Roku boundary
 

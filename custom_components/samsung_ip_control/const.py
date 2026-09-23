@@ -16,7 +16,7 @@ DEFAULT_NAME = "Samsung TV"
 DEFAULT_PORT = 1516
 DEFAULT_SCAN_INTERVAL = 10
 
-PLATFORMS = ["media_player", "remote"]
+PLATFORMS = ["media_player", "remote", "light"]
 
 SOURCE_TO_API = {
     "HDMI 1": "HDMI1",
@@ -87,6 +87,17 @@ APP_COMMANDS = tuple(f"app_{app}" for app in APP_TO_API)
 # reports it alongside the polled input.
 SURFACE_HOME = "Home"
 
+# `backlightControl` is absent from Samsung's published 2018/2023 Consumer IP
+# command sheets (see docs/COMMANDS.md). It is included anyway because it was
+# independently verified, get and set, against a physical Samsung QN90B
+# (QE65QN90BATXSQ) over the same port-1516 JSON-RPC channel by a sibling
+# project (`tvolve`). Treat it as a second-source, hardware-verified method
+# rather than a guess, but expect it to need its own compatibility report on
+# other models the way every other command does.
+BACKLIGHT_MIN = 0
+BACKLIGHT_MAX = 50
+BACKLIGHT_STEP = 10
+
 APP_SURFACES = {
     "app_browser": "Browser",
     "app_netflix": "Netflix",
@@ -114,5 +125,7 @@ REMOTE_COMMANDS = (
     "hdmi_4",
     "power_on",
     "power_off",
+    "brightness_up",
+    "brightness_down",
     *APP_COMMANDS,
 )

@@ -59,7 +59,7 @@ remote.samsung_tv_remote
 
 Replace those IDs in every dashboard and automation example.
 
-The remote entity publishes 52 commands in its `supported_commands` attribute. The media player exposes native play, pause, stop, and allowlisted app-launch actions. Review [COMMANDS.md](COMMANDS.md) before enabling model-dependent keys or applications.
+The remote entity publishes 54 commands in its `supported_commands` attribute. The media player exposes native play, pause, stop, and allowlisted app-launch actions. A `light` entity exposes backlight brightness. Review [COMMANDS.md](COMMANDS.md) before enabling model-dependent keys or applications, and [HOMEKIT_BRIGHTNESS.md](HOMEKIT_BRIGHTNESS.md) before exposing the TV through HomeKit Bridge.
 
 ## Enable optional local text input
 
