@@ -663,12 +663,12 @@ class BacklightTests(unittest.IsolatedAsyncioTestCase):
             await client.async_set_backlight(25)
         get_power.assert_not_awaited()
 
-    async def test_set_backlight_writes_then_confirms_with_a_read(self) -> None:
-        """A bare write alone was empirically slow to take visible effect on
-        a real Samsung QN90B; a brief pause and read-back is what a sibling
-        project (tvolve) does after every write, and is what made the
-        picture react immediately instead of waiting on some unrelated
-        later request."""
+    async def test_set_backlight_writes_a_neighbor_then_the_real_target(self) -> None:
+        """A lone write is accepted but the panel fades to it over 10-15s
+        instead of snapping there; a confirmatory read-back afterward (what
+        the sibling `tvolve` project does) did not change that. Writing a
+        *different* value right before the real target empirically makes it
+        land instantly instead — an identical repeated value does not."""
         client = self._client()
         with (
             patch.object(client_module.asyncio, "sleep", new=AsyncMock()) as sleep,
@@ -683,29 +683,52 @@ class BacklightTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             request.await_args_list,
             [
+                unittest.mock.call("backlightControl", {"backlight": 24}),
                 unittest.mock.call("backlightControl", {"backlight": 25}),
-                unittest.mock.call("backlightControl"),
             ],
         )
 
-    async def test_set_backlight_succeeds_even_if_the_confirmatory_read_fails(
-        self,
-    ) -> None:
+    async def test_set_backlight_neighbor_stays_in_range_at_the_minimum(self) -> None:
         client = self._client()
         with (
             patch.object(client_module.asyncio, "sleep", new=AsyncMock()),
             patch.object(
                 client,
                 "_async_request",
-                new=AsyncMock(
-                    side_effect=[
-                        {},
-                        SamsungIPControlTransportError("gone"),
-                    ]
-                ),
-            ),
+                new=AsyncMock(return_value={"backlight": BACKLIGHT_MIN}),
+            ) as request,
         ):
-            await client.async_set_backlight(25)  # must not raise
+            await client.async_set_backlight(BACKLIGHT_MIN)
+        self.assertEqual(
+            request.await_args_list,
+            [
+                unittest.mock.call(
+                    "backlightControl", {"backlight": BACKLIGHT_MIN + 1}
+                ),
+                unittest.mock.call("backlightControl", {"backlight": BACKLIGHT_MIN}),
+            ],
+        )
+
+    async def test_set_backlight_neighbor_stays_in_range_at_the_maximum(self) -> None:
+        client = self._client()
+        with (
+            patch.object(client_module.asyncio, "sleep", new=AsyncMock()),
+            patch.object(
+                client,
+                "_async_request",
+                new=AsyncMock(return_value={"backlight": BACKLIGHT_MAX}),
+            ) as request,
+        ):
+            await client.async_set_backlight(BACKLIGHT_MAX)
+        self.assertEqual(
+            request.await_args_list,
+            [
+                unittest.mock.call(
+                    "backlightControl", {"backlight": BACKLIGHT_MAX - 1}
+                ),
+                unittest.mock.call("backlightControl", {"backlight": BACKLIGHT_MAX}),
+            ],
+        )
 
     async def test_step_backlight_clamps_at_the_maximum_and_skips_the_write(
         self,

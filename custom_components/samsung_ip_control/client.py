@@ -10,7 +10,6 @@ import json
 import logging
 import socket
 import ssl
-from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
 from .const import (
@@ -262,29 +261,28 @@ class SamsungIPControlClient:
         return value
 
     async def async_set_backlight(self, value: int) -> None:
-        """Set an explicit backlight level, 0-50, then confirm it.
+        """Set an explicit backlight level, 0-50, applied immediately.
 
-        Writes directly with no preceding power check; an unrelated
-        `powerControl` read immediately before the write was tried and
-        removed, since it added latency for no observed benefit. The write
-        alone can sit accepted but visibly unapplied on the panel for a long
-        time (in practice, until whatever the next unrelated request to the
-        TV happens to be); a brief pause followed by a plain read of this
-        same method is what a sibling project (`tvolve`) already does after
-        every write, and empirically is what makes the physical picture
-        react immediately instead of waiting on some later, unrelated
-        request to nudge it. The read's own result is not used for
-        anything; only its side effect on the TV matters here, so its
-        failure is not treated as the write itself having failed.
+        A lone write is accepted by the TV, but the panel then fades to it
+        over roughly 10-15 seconds instead of snapping there. A confirmatory
+        read of the same value afterward (matching what a sibling project,
+        `tvolve`, does) did not change this. What empirically does: writing
+        a *different* value immediately makes the panel jump straight to
+        that new value instead of continuing to fade — an identical
+        repeated value does not trigger this, only a changed one does. So
+        every write is preceded by a throwaway neighboring value (the
+        target plus or minus one, whichever stays in range) a short pause
+        beforehand, which is enough to make the real target land instantly
+        rather than fade in.
         """
         if not isinstance(value, int) or not BACKLIGHT_MIN <= value <= BACKLIGHT_MAX:
             raise ValueError(
                 f"Backlight must be between {BACKLIGHT_MIN} and {BACKLIGHT_MAX}"
             )
-        await self._async_request("backlightControl", {"backlight": value})
+        nudge = value - 1 if value > BACKLIGHT_MIN else value + 1
+        await self._async_request("backlightControl", {"backlight": nudge})
         await asyncio.sleep(0.15)
-        with suppress(SamsungIPControlError):
-            await self.async_get_backlight()
+        await self._async_request("backlightControl", {"backlight": value})
 
     async def async_step_backlight(self, delta: int) -> int:
         """Adjust the backlight by delta, clamped to the native range.
