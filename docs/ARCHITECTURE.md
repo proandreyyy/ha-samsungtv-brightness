@@ -55,6 +55,8 @@ Enabling text input creates a second trust decision. The options flow pins the s
 
 After pairing, the integration reads the TV serial and uses it as the Home Assistant config-entry unique ID. Entity and device-registry identifiers use a SHA-256 digest of the serial, which stays stable across reinstallation without placing the plaintext serial in config-entry data. The digest and serial are redacted from diagnostics. Reconfiguration validates the pinned certificate, token, and serial digest before accepting a new address, port, or Wake-on-LAN MAC. A verified legacy identity migration changes the config-entry unique ID atomically with the flow's data update.
 
+Some firmware has no `getDeviceInformation` at all — observed as JSON-RPC `-32601` on a Samsung QN90B, with every other Consumer IP Control method the integration uses still working. `_device_information_or_empty` catches that (and any other failure of this one call) and returns an empty record instead of failing pairing, reauthentication, or reconfiguration outright. Pairing, reauthentication, and reconfiguration all then fall back to the configured MAC, then the host, in that order, computing identity as `serial or mac or host.casefold()`. Serial is still always attempted and always preferred when the TV supports it; the fallback exists only for TVs that never can. `_verified_identity_updates` does not need to know which case it is — it treats the resolved identity the same way whether it came from a real serial or a fallback.
+
 ## Protocol limits
 
 Every response must use JSON-RPC `2.0` and match the request ID. Response bodies are limited to 64 KiB. Exceptions omit device-provided message text so a compromised endpoint cannot inject arbitrary content into normal integration errors.

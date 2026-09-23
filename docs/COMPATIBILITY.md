@@ -85,6 +85,10 @@ Optional text input paired separately and synchronized complete values, replacem
 
 `brightness_up` and `brightness_down` were added after the 2026-08-22 run recorded above and are **not** part of it. `backlightControl` is absent from Samsung's published Consumer IP command sheets; its only verification is a sibling project (`tvolve`) reading and writing it against a physical Samsung QN90B (`QE65QN90BATXSQ`) over the same port-`1516` channel. That is a different unit from the `25_RSM_QD` this repository's matrix above covers. Until it is exercised against a TV tracked in this repository's own compatibility log, treat it the way an unreported model would be treated: plausible by protocol similarity, not yet Pass.
 
+## `getDeviceInformation` availability
+
+A Samsung QN90B (2022, model code `QE65QN90BATXSQ`) answers `getDeviceInformation` with JSON-RPC error `-32601` ("method not found") over port `1516`, while `createAccessToken`, `powerControl`, and `backlightControl` all work normally on the same TV. This means the QN90B never returns a serial number, so this fork's config flow falls back to the configured MAC, then the host, for its Home Assistant identity (see [ARCHITECTURE.md](ARCHITECTURE.md#device-identity)). Model, firmware, and possibly the 2020-vs-earlier port split (see below) likely determine which method surface a given TV actually implements; report `getDeviceInformation` results explicitly when filing a compatibility report for a new model.
+
 ## Reporting another model
 
 Open a compatibility issue with the consumer model number, model year, sales region, firmware, Home Assistant version, installation type, reachable Consumer IP control port, and per-command results. Include whether power-on still works after the TV has been off for more than one minute and whether wired or wireless Wake-on-LAN was used. When optional text input was tested, include whether secure port `8002` was reachable, whether a separate authorization prompt appeared, which non-sensitive application field was active, and whether characters and `submit` behaved as expected.

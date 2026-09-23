@@ -66,6 +66,25 @@ def _log_pairing_failure(step: str, ex: SamsungIPControlError) -> None:
     )
 
 
+async def _device_information_or_empty(
+    client: SamsungIPControlClient, step: str
+) -> dict[str, str]:
+    """Return device information, or an empty record if the TV has none.
+
+    Some Samsung firmware does not implement `getDeviceInformation` at all
+    (observed as JSON-RPC -32601 on a Samsung QN90B, though every other
+    Consumer IP Control method the integration uses still works). Losing the
+    serial only means falling back to a MAC- or host-based identity; it is
+    not a reason to fail pairing, reauthentication, or reconfiguration
+    outright.
+    """
+    try:
+        return await client.async_get_device_information()
+    except SamsungIPControlError as ex:
+        _log_pairing_failure(f"{step} device information", ex)
+        return {"model": "", "firmware": "", "serial": ""}
+
+
 def _serial_hash(serial: str) -> str:
     """Return a stable, non-plaintext identity derived from the TV serial."""
     return hashlib.sha256(serial.encode("utf-8")).hexdigest()
@@ -112,7 +131,6 @@ class SamsungIPControlConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     fingerprint = await client.async_trust_current_certificate()
                     token = await client.async_pair()
                     await client.async_get_power()
-                    device_information = await client.async_get_device_information()
                 except SamsungIPControlCertificateError:
                     errors["base"] = "certificate_mismatch"
                 except SamsungIPControlTransportError:
@@ -121,26 +139,27 @@ class SamsungIPControlConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     _log_pairing_failure("initial pairing", ex)
                     errors["base"] = "pairing_failed"
                 else:
+                    device_information = await _device_information_or_empty(
+                        client, "initial pairing"
+                    )
                     serial = device_information["serial"]
-                    if not serial:
-                        errors["base"] = "missing_unique_id"
-                    else:
-                        serial_hash = _serial_hash(serial)
-                        await self.async_set_unique_id(serial)
-                        self._abort_if_unique_id_configured()
-                        return self.async_create_entry(
-                            title=user_input[CONF_NAME],
-                            data={
-                                CONF_NAME: user_input[CONF_NAME],
-                                CONF_HOST: host,
-                                CONF_PORT: user_input[CONF_PORT],
-                                CONF_MAC: mac,
-                                CONF_CERTIFICATE_FINGERPRINT: fingerprint,
-                                CONF_ENTITY_IDENTITY: serial_hash,
-                                CONF_SERIAL_HASH: serial_hash,
-                                CONF_TOKEN: token,
-                            },
-                        )
+                    identity = serial or mac or host.casefold()
+                    identity_hash = _serial_hash(identity)
+                    await self.async_set_unique_id(identity)
+                    self._abort_if_unique_id_configured()
+                    return self.async_create_entry(
+                        title=user_input[CONF_NAME],
+                        data={
+                            CONF_NAME: user_input[CONF_NAME],
+                            CONF_HOST: host,
+                            CONF_PORT: user_input[CONF_PORT],
+                            CONF_MAC: mac,
+                            CONF_CERTIFICATE_FINGERPRINT: fingerprint,
+                            CONF_ENTITY_IDENTITY: identity_hash,
+                            CONF_SERIAL_HASH: identity_hash,
+                            CONF_TOKEN: token,
+                        },
+                    )
 
         defaults = user_input or {}
         schema = vol.Schema(
@@ -196,7 +215,6 @@ class SamsungIPControlConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     await client.async_trust_current_certificate()
                 token = await client.async_pair()
                 await client.async_get_power()
-                device_information = await client.async_get_device_information()
             except SamsungIPControlCertificateError:
                 errors["base"] = "certificate_mismatch"
             except SamsungIPControlTransportError:
@@ -206,20 +224,26 @@ class SamsungIPControlConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "pairing_failed"
             else:
                 fingerprint = client.certificate_fingerprint
-                serial = device_information["serial"]
                 if fingerprint is None:
                     errors["base"] = "pairing_failed"
-                elif not serial:
-                    errors["base"] = "missing_unique_id"
                 else:
-                    await self.async_set_unique_id(serial)
-                    identity_updates = self._verified_identity_updates(entry, serial)
+                    device_information = await _device_information_or_empty(
+                        client, "reauthentication"
+                    )
+                    serial = device_information["serial"]
+                    identity = (
+                        serial
+                        or entry.data.get(CONF_MAC)
+                        or entry.data[CONF_HOST].casefold()
+                    )
+                    await self.async_set_unique_id(identity)
+                    identity_updates = self._verified_identity_updates(entry, identity)
                     if identity_updates is None:
                         errors["base"] = "device_mismatch"
                     else:
                         return self.async_update_reload_and_abort(
                             entry,
-                            unique_id=serial,
+                            unique_id=identity,
                             data_updates={
                                 CONF_TOKEN: token,
                                 CONF_CERTIFICATE_FINGERPRINT: fingerprint,
@@ -269,7 +293,6 @@ class SamsungIPControlConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
                 try:
                     await client.async_get_power()
-                    device_information = await client.async_get_device_information()
                 except SamsungIPControlCertificateError:
                     errors["base"] = "certificate_mismatch"
                 except SamsungIPControlAuthError:
@@ -280,27 +303,26 @@ class SamsungIPControlConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     _log_pairing_failure("reconfiguration", ex)
                     errors["base"] = "pairing_failed"
                 else:
+                    device_information = await _device_information_or_empty(
+                        client, "reconfiguration"
+                    )
                     serial = device_information["serial"]
-                    if not serial:
-                        errors["base"] = "missing_unique_id"
+                    identity = serial or mac or host.casefold()
+                    await self.async_set_unique_id(identity)
+                    identity_updates = self._verified_identity_updates(entry, identity)
+                    if identity_updates is None:
+                        errors["base"] = "device_mismatch"
                     else:
-                        await self.async_set_unique_id(serial)
-                        identity_updates = self._verified_identity_updates(
-                            entry, serial
+                        return self.async_update_reload_and_abort(
+                            entry,
+                            unique_id=identity,
+                            data_updates={
+                                CONF_HOST: host,
+                                CONF_PORT: user_input[CONF_PORT],
+                                CONF_MAC: mac,
+                                **identity_updates,
+                            },
                         )
-                        if identity_updates is None:
-                            errors["base"] = "device_mismatch"
-                        else:
-                            return self.async_update_reload_and_abort(
-                                entry,
-                                unique_id=serial,
-                                data_updates={
-                                    CONF_HOST: host,
-                                    CONF_PORT: user_input[CONF_PORT],
-                                    CONF_MAC: mac,
-                                    **identity_updates,
-                                },
-                            )
 
         defaults = user_input or entry.data
         schema = vol.Schema(

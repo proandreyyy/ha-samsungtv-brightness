@@ -288,8 +288,8 @@ class PublicationTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn('serial = device_information["serial"]', text)
         self.assertIn("self._abort_if_unique_id_configured()", text)
-        self.assertIn("unique_id=serial", text)
-        self.assertNotIn("unique_id = mac or host", text)
+        self.assertIn("identity = serial or mac or host.casefold()", text)
+        self.assertNotIn("identity = mac or host", text)
 
     def test_diagnostics_redact_private_device_metadata(self) -> None:
         text = (

@@ -25,6 +25,7 @@ except ModuleNotFoundError as ex:
     ) from ex
 
 from custom_components.samsung_ip_control import async_setup, async_setup_entry
+from custom_components.samsung_ip_control.client import SamsungIPControlProtocolError
 from custom_components.samsung_ip_control.config_flow import (
     SamsungIPControlConfigFlow,
     SamsungIPControlOptionsFlow,
@@ -284,6 +285,71 @@ class HomeAssistantApiTests(unittest.IsolatedAsyncioTestCase):
                 CONF_CERTIFICATE_FINGERPRINT: "A" * 64,
                 CONF_ENTITY_IDENTITY: "stable-entity-identity",
                 CONF_SERIAL_HASH: _serial_hash("verified-serial"),
+            },
+        )
+
+    async def test_reauthentication_falls_back_to_mac_without_device_information(
+        self,
+    ) -> None:
+        """A QN90B answers getDeviceInformation with JSON-RPC -32601; reauth
+        must still succeed, identified by MAC rather than an unknown serial."""
+        entry = types.SimpleNamespace(
+            entry_id="entry-one",
+            unique_id="00:00:5E:00:53:01",
+            data={
+                CONF_HOST: "192.0.2.5",
+                CONF_PORT: 1516,
+                CONF_MAC: "00:00:5E:00:53:01",
+                CONF_TOKEN: "rejected-token",
+                CONF_CERTIFICATE_FINGERPRINT: "B" * 64,
+                CONF_ENTITY_IDENTITY: "",
+                CONF_SERIAL_HASH: "",
+            },
+        )
+        config_entries = FakeConfigEntries([entry])
+        update_reload_and_abort = Mock(return_value={"type": "abort"})
+        flow = types.SimpleNamespace(
+            hass=types.SimpleNamespace(config_entries=config_entries),
+            _get_reauth_entry=Mock(return_value=entry),
+            async_set_unique_id=AsyncMock(),
+            _verified_identity_updates=lambda current, serial: (
+                SamsungIPControlConfigFlow._verified_identity_updates(
+                    flow, current, serial
+                )
+            ),
+            async_update_reload_and_abort=update_reload_and_abort,
+        )
+        client = types.SimpleNamespace(
+            certificate_fingerprint="B" * 64,
+            async_trust_current_certificate=AsyncMock(),
+            async_pair=AsyncMock(return_value="replacement-token"),
+            async_get_power=AsyncMock(return_value=True),
+            async_get_device_information=AsyncMock(
+                side_effect=SamsungIPControlProtocolError(
+                    "The TV rejected getDeviceInformation, code -32601",
+                    code=-32601,
+                )
+            ),
+        )
+
+        with patch(
+            "custom_components.samsung_ip_control.config_flow.SamsungIPControlClient",
+            return_value=client,
+        ):
+            result = await SamsungIPControlConfigFlow.async_step_reauth_confirm(
+                flow, {}
+            )
+
+        self.assertEqual(result, {"type": "abort"})
+        flow.async_set_unique_id.assert_awaited_once_with("00:00:5E:00:53:01")
+        update_reload_and_abort.assert_called_once_with(
+            entry,
+            unique_id="00:00:5E:00:53:01",
+            data_updates={
+                CONF_TOKEN: "replacement-token",
+                CONF_CERTIFICATE_FINGERPRINT: "B" * 64,
+                CONF_ENTITY_IDENTITY: "00:00:5E:00:53:01",
+                CONF_SERIAL_HASH: _serial_hash("00:00:5E:00:53:01"),
             },
         )
 

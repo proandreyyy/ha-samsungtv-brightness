@@ -36,7 +36,6 @@
       "authentication_failed": "The TV rejected the saved access token. Close this flow and complete the reauthentication request first.",
       "device_mismatch": "The verified TV identity does not match this config entry. Check the address and select the original TV.",
       "pairing_failed": "Pairing failed. Close Samsung Home so an HDMI picture is visible, retry, and accept the prompt on the TV.",
-      "missing_unique_id": "The TV did not return a serial number. This integration requires a stable device identifier and did not save the configuration.",
       "invalid_host": "Enter a valid TV IP address or hostname.",
       "invalid_mac": "Enter a valid 12-digit MAC address."
     },

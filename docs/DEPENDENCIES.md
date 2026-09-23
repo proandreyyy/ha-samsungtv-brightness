@@ -9,7 +9,7 @@ The Samsung integration has no separately installed Python runtime packages. Hom
 | Home Assistant | `2026.8.0` or newer | Hosts the custom integration, config flow, entities, diagnostics, and automations |
 | Samsung TV | HTTPS JSON-RPC IP Control on TCP `1516` | Provides the local control API |
 | Local network | Home Assistant can reach the TV address and port | Carries polling and commands |
-| Stable TV identity | The TV must return a serial number during pairing | Supplies the stable Home Assistant config-entry unique ID |
+| Stable TV identity | Preferably a serial number during pairing | Supplies the stable Home Assistant config-entry unique ID; falls back to the configured MAC, then the host, when the TV has no `getDeviceInformation` (observed on a Samsung QN90B) |
 | Trusted first pairing | User is present at the physical TV on a trusted LAN | Establishes the initial certificate pin and approves token creation |
 
 The integration stores the Samsung Consumer IP access token and pinned certificate fingerprint in the Home Assistant config entry. Optional text input stores a separate local WebSocket token and certificate fingerprint in config-entry options. It does not use a `.env` file, `secrets.yaml`, SmartThings, or a cloud API.
