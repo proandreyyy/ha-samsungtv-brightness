@@ -87,6 +87,10 @@ Diagnostics redact both tokens, both certificate fingerprints, the serial, TV ad
 
 Each request opens its own TLS connection (see [Protocol limits](#protocol-limits)), so it has a real cost, and a fast slider drag in Apple Home can fire dozens of brightness writes in a couple of seconds. Working through every intermediate value strictly in arrival order made a full-range drag look stuck near its starting point for several seconds — the true final value was still queued behind many stale ones. `async_queue_backlight` keeps only the most recently requested target: a write already in flight finishes normally, and the writer then immediately sends whatever the latest target has become, dropping anything superseded in between. This is the same coalescing scheme the sibling `tvolve` iOS project already uses for its own slider. It is intentionally fire-and-forget from the entity's perspective — `async_turn_on`/`async_turn_off` publish the optimistic target immediately and return, and a write failure is logged rather than raised, since by the time a queued write finishes there is often already a newer target superseding it.
 
+#### The panel's own ramp
+
+`backlightControl` write and read-back both confirm the new value within a few hundred milliseconds on a Samsung QN90B, but the physical picture takes roughly 10 seconds to start responding and another 10-15 seconds to finish fading to the new level — the panel itself ramps gradually rather than snapping instantly. Judged immediately after a command, or across a fast slider drag, this reads as "barely changed"; the effect is real but arrives on the panel's own schedule, not the write's. This is TV/firmware behavior, not something the integration controls or should try to compensate for.
+
 ## First-party remote card
 
 The integration declares Home Assistant's built-in `http` component as a manifest dependency and serves one static JavaScript module from `/samsung_ip_control_static/samsung-ip-remote-card.js`. The file is public like other Home Assistant frontend resources and contains only fixed UI code. It contains no configuration, token, address, device identity, or entered text.
