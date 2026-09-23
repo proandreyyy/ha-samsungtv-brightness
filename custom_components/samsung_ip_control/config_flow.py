@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import logging
 from typing import Any, override
 
 import voluptuous as vol
@@ -41,6 +42,25 @@ from .text_client import (
     SamsungTextInputError,
     SamsungTextInputTransportError,
 )
+
+_LOGGER = logging.getLogger(__name__)
+
+
+def _log_pairing_failure(step: str, ex: SamsungIPControlError) -> None:
+    """Log the exception class and any numeric code, never the TV's own text.
+
+    "Pairing failed" alone does not distinguish a genuine on-TV decline from a
+    later authenticated call rejecting the TV's response shape, so this is the
+    only way to tell those apart without echoing remote-provided text into
+    the log.
+    """
+    code = getattr(ex, "code", None)
+    _LOGGER.warning(
+        "Samsung TV IP Control %s failed: %s (code=%s)",
+        step,
+        type(ex).__name__,
+        code,
+    )
 
 
 def _serial_hash(serial: str) -> str:
@@ -94,7 +114,8 @@ class SamsungIPControlConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors["base"] = "certificate_mismatch"
                 except SamsungIPControlTransportError:
                     errors["base"] = "cannot_connect"
-                except SamsungIPControlError:
+                except SamsungIPControlError as ex:
+                    _log_pairing_failure("initial pairing", ex)
                     errors["base"] = "pairing_failed"
                 else:
                     serial = device_information["serial"]
@@ -177,7 +198,8 @@ class SamsungIPControlConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "certificate_mismatch"
             except SamsungIPControlTransportError:
                 errors["base"] = "cannot_connect"
-            except SamsungIPControlError:
+            except SamsungIPControlError as ex:
+                _log_pairing_failure("reauthentication", ex)
                 errors["base"] = "pairing_failed"
             else:
                 fingerprint = client.certificate_fingerprint
@@ -251,7 +273,8 @@ class SamsungIPControlConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors["base"] = "authentication_failed"
                 except SamsungIPControlTransportError:
                     errors["base"] = "cannot_connect"
-                except SamsungIPControlError:
+                except SamsungIPControlError as ex:
+                    _log_pairing_failure("reconfiguration", ex)
                     errors["base"] = "pairing_failed"
                 else:
                     serial = device_information["serial"]
