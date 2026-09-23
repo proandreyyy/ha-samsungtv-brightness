@@ -10,6 +10,7 @@ import json
 import logging
 import socket
 import ssl
+from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
 from .const import (
@@ -261,19 +262,29 @@ class SamsungIPControlClient:
         return value
 
     async def async_set_backlight(self, value: int) -> None:
-        """Set an explicit backlight level, 0-50.
+        """Set an explicit backlight level, 0-50, then confirm it.
 
-        Writes directly with no preceding power check. A sibling project
-        (`tvolve`) verified this exact direct write against a physical
-        Samsung QN90B; adding an unrelated `powerControl` read immediately
-        before it here made the visible on-screen effect nearly disappear,
-        so this stays a single request like every other read of this method.
+        Writes directly with no preceding power check; an unrelated
+        `powerControl` read immediately before the write was tried and
+        removed, since it added latency for no observed benefit. The write
+        alone can sit accepted but visibly unapplied on the panel for a long
+        time (in practice, until whatever the next unrelated request to the
+        TV happens to be); a brief pause followed by a plain read of this
+        same method is what a sibling project (`tvolve`) already does after
+        every write, and empirically is what makes the physical picture
+        react immediately instead of waiting on some later, unrelated
+        request to nudge it. The read's own result is not used for
+        anything; only its side effect on the TV matters here, so its
+        failure is not treated as the write itself having failed.
         """
         if not isinstance(value, int) or not BACKLIGHT_MIN <= value <= BACKLIGHT_MAX:
             raise ValueError(
                 f"Backlight must be between {BACKLIGHT_MIN} and {BACKLIGHT_MAX}"
             )
         await self._async_request("backlightControl", {"backlight": value})
+        await asyncio.sleep(0.15)
+        with suppress(SamsungIPControlError):
+            await self.async_get_backlight()
 
     async def async_step_backlight(self, delta: int) -> int:
         """Adjust the backlight by delta, clamped to the native range.

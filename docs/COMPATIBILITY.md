@@ -85,7 +85,7 @@ Optional text input paired separately and synchronized complete values, replacem
 
 `brightness_up` and `brightness_down` were added after the 2026-08-22 run recorded above and are **not** part of it. `backlightControl` is absent from Samsung's published Consumer IP command sheets. Its first verification was a sibling project (`tvolve`) reading and writing it against a physical Samsung QN90B (`QE65QN90BATXSQ`). It has since been independently exercised against a second Samsung QN90B, both through this integration's `light` entity and through raw standalone JSON-RPC calls: reads and writes across the full native range (0-50) both landed correctly and were confirmed by the physical picture. That is a different unit from the `25_RSM_QD` this repository's matrix above covers, so it is recorded here rather than folded into that table.
 
-The physical picture on this QN90B takes roughly 10 seconds to start responding to a backlight write and another 10-15 seconds to finish fading to the new level; it does not snap instantly. Judged immediately, or across a fast slider drag, this reads as "barely changed" even though the write landed correctly. See [ARCHITECTURE.md](ARCHITECTURE.md#the-panels-own-ramp).
+A bare write alone was empirically accepted by this QN90B but left visibly unapplied on the physical picture for a long time, waiting on whatever the next unrelated request to the TV happened to be. A short pause and a follow-up read after every write, the same thing `tvolve` already does, made the picture react immediately instead. See [ARCHITECTURE.md](ARCHITECTURE.md#the-confirmatory-read).
 
 ## `getDeviceInformation` availability
 

@@ -649,17 +649,63 @@ class BacklightTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             await client.async_set_backlight(BACKLIGHT_MAX + 1)
 
-    async def test_set_backlight_writes_directly_with_no_power_check(self) -> None:
-        """A preceding powerControl read visibly dulled the effect on a real
-        Samsung QN90B, unlike the sibling project's direct write."""
+    async def test_set_backlight_skips_the_preceding_power_check(self) -> None:
         client = self._client()
         with (
+            patch.object(client_module.asyncio, "sleep", new=AsyncMock()),
             patch.object(client, "async_get_power", new=AsyncMock()) as get_power,
-            patch.object(client, "_async_request", new=AsyncMock()) as request,
+            patch.object(
+                client,
+                "_async_request",
+                new=AsyncMock(return_value={"backlight": 25}),
+            ),
         ):
             await client.async_set_backlight(25)
         get_power.assert_not_awaited()
-        request.assert_awaited_once_with("backlightControl", {"backlight": 25})
+
+    async def test_set_backlight_writes_then_confirms_with_a_read(self) -> None:
+        """A bare write alone was empirically slow to take visible effect on
+        a real Samsung QN90B; a brief pause and read-back is what a sibling
+        project (tvolve) does after every write, and is what made the
+        picture react immediately instead of waiting on some unrelated
+        later request."""
+        client = self._client()
+        with (
+            patch.object(client_module.asyncio, "sleep", new=AsyncMock()) as sleep,
+            patch.object(
+                client,
+                "_async_request",
+                new=AsyncMock(return_value={"backlight": 25}),
+            ) as request,
+        ):
+            await client.async_set_backlight(25)
+        sleep.assert_awaited_once_with(0.15)
+        self.assertEqual(
+            request.await_args_list,
+            [
+                unittest.mock.call("backlightControl", {"backlight": 25}),
+                unittest.mock.call("backlightControl"),
+            ],
+        )
+
+    async def test_set_backlight_succeeds_even_if_the_confirmatory_read_fails(
+        self,
+    ) -> None:
+        client = self._client()
+        with (
+            patch.object(client_module.asyncio, "sleep", new=AsyncMock()),
+            patch.object(
+                client,
+                "_async_request",
+                new=AsyncMock(
+                    side_effect=[
+                        {},
+                        SamsungIPControlTransportError("gone"),
+                    ]
+                ),
+            ),
+        ):
+            await client.async_set_backlight(25)  # must not raise
 
     async def test_step_backlight_clamps_at_the_maximum_and_skips_the_write(
         self,
